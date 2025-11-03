@@ -6,7 +6,10 @@ from botocore.config import Config
 
 from backend.utils.settings import settings
 
-def s3_client_factory(session: aioboto3.Session) -> Callable[[], Awaitable[AioBaseClient]]:
+
+def s3_client_factory(
+    session: aioboto3.Session,
+) -> Callable[[], Awaitable[AioBaseClient]]:
     """
     Создание кратковременных клиентов для S3
 
@@ -21,7 +24,7 @@ def s3_client_factory(session: aioboto3.Session) -> Callable[[], Awaitable[AioBa
         retries={"max_attempts": settings.s3_max_attempts, "mode": "standard"},
         connect_timeout=settings.s3_connect_timeout,
         read_timeout=settings.s3_read_timeout,
-        max_pool_connections=settings.s3_max_pool
+        max_pool_connections=settings.s3_max_pool,
     )
 
     async def _client() -> AioBaseClient:

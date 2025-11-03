@@ -1,22 +1,32 @@
-from sklearn.linear_model import ElasticNet
-from sklearn.ensemble import GradientBoostingRegressor
-from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
-import pandas as pd
-import re
-import json
 import io
-import joblib
-from typing import Callable, Awaitable
-from aiobotocore.client import AioBaseClient
+import json
+import re
+from typing import Awaitable, Callable
 
-from backend.utils.data_models import RunConfig, FitResult, ModelScore, GBRHParams, ElasticNetParams
+import joblib
+import pandas as pd
+from aiobotocore.client import AioBaseClient
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.linear_model import ElasticNet
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+
 from backend.preprocessing import preprocess_dataset
+from backend.utils.data_models import (
+    ElasticNetParams,
+    FitResult,
+    GBRHParams,
+    ModelScore,
+    RunConfig,
+)
 from backend.utils.logger import get_logger
 from backend.utils.settings import settings
 
 logger = get_logger("backend")
 
-def train_regressor_task(df: pd.DataFrame, config: RunConfig) -> tuple[ElasticNet | GradientBoostingRegressor, FitResult]:
+
+def train_regressor_task(
+    df: pd.DataFrame, config: RunConfig
+) -> tuple[ElasticNet | GradientBoostingRegressor, FitResult]:
     """
     Обучает модель (ElasticNet или GradientBoostingRegressor) по RunConfig.
 
@@ -43,7 +53,9 @@ def train_regressor_task(df: pd.DataFrame, config: RunConfig) -> tuple[ElasticNe
     params: ElasticNetParams | GBRHParams = config.ml_config.hyperparameters
 
     if model_class == "ElasticNet":
-        model = ElasticNet(alpha=params.alpha, l1_ratio=params.l1_ratio, random_state=42)
+        model = ElasticNet(
+            alpha=params.alpha, l1_ratio=params.l1_ratio, random_state=42
+        )
     elif model_class == "GradientBoostingRegressor":
         model = GradientBoostingRegressor(
             learning_rate=params.learning_rate,
@@ -58,7 +70,9 @@ def train_regressor_task(df: pd.DataFrame, config: RunConfig) -> tuple[ElasticNe
     model.fit(X, y)
     y_pred: pd.Series = model.predict(X)
 
-    safe_params = re.sub(r"[^a-zA-Z0-9]", "_", json.dumps(params.model_dump(), sort_keys=True))
+    safe_params = re.sub(
+        r"[^a-zA-Z0-9]", "_", json.dumps(params.model_dump(), sort_keys=True)
+    )
     model_name = f"{model_class}_{safe_params[:40]}.joblib"
 
     scores = [
@@ -68,6 +82,7 @@ def train_regressor_task(df: pd.DataFrame, config: RunConfig) -> tuple[ElasticNe
     ]
 
     return model, FitResult(name=model_name, scores=scores)
+
 
 async def save_trained_model(
     model,
@@ -96,7 +111,7 @@ async def save_trained_model(
         joblib.dump(model, buffer)
         buffer.seek(0)
 
-        async with (await s3_client_factory()) as s3:
+        async with await s3_client_factory() as s3:
             await s3.put_object(
                 Bucket=settings.s3_bucket,
                 Key=key,
@@ -104,7 +119,9 @@ async def save_trained_model(
                 ContentType="application/octet-stream",
             )
 
-        logger.info(f"Модель {model_name} пользователя {user_id} успешно сохранена в S3 ({key})")
+        logger.info(
+            f"Модель {model_name} пользователя {user_id} успешно сохранена в S3 ({key})"
+        )
         return key
 
     except Exception as e:

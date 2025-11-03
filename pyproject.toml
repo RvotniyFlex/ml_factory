@@ -28,3 +28,14 @@ packages = [
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+[dependency-groups]
+dev = [
+    "pre-commit (>=4.3.0,<5.0.0)",
+    "ruff (>=0.14.3,<0.15.0)"
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+select = ["E", "F", "I"]
+ignore = ["E501"] 

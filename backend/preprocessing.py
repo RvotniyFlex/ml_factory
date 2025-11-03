@@ -1,10 +1,17 @@
 import pandas as pd
-from sklearn.preprocessing import StandardScaler, MinMaxScaler, LabelEncoder, OneHotEncoder
+from sklearn.preprocessing import (
+    LabelEncoder,
+    MinMaxScaler,
+    OneHotEncoder,
+    StandardScaler,
+)
 
 from backend.utils.data_models import DatasetPreprocessing
 
 
-def preprocess_dataset(df: pd.DataFrame, preprocessing_cfg: DatasetPreprocessing) -> pd.DataFrame:
+def preprocess_dataset(
+    df: pd.DataFrame, preprocessing_cfg: DatasetPreprocessing
+) -> pd.DataFrame:
     """
     Применяет предобработку к DataFrame на основе конфигурации DatasetPreprocessing.
 
@@ -22,10 +29,10 @@ def preprocess_dataset(df: pd.DataFrame, preprocessing_cfg: DatasetPreprocessing
 
         if col_name not in df.columns:
             raise ValueError(f"Колонка {col_name} не найдена в данных")
-        
+
         if col.fillna_policy is None:
             pass
-        
+
         if col.fillna_policy == "mean" and col.data_type == "numerical":
             df[col_name] = df[col_name].fillna(df[col_name].mean())
 

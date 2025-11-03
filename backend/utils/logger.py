@@ -8,6 +8,7 @@ DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 LOG_DIR = Path(__file__).parent / "logs"
 LOG_DIR.mkdir(exist_ok=True)
 
+
 def setup_logging():
     """Глобальная настройка логирования"""
     root_logger = logging.getLogger()
