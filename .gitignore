@@ -1,0 +1,130 @@
+# ==============================
+#  PYTHON / GENERAL
+# ==============================
+__pycache__/
+*.pyo
+*.pyd
+*.so
+*.dylib
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.installed.cfg
+*.manifest
+*.spec
+MANIFEST
+.zhsrc
+
+# ==============================
+# 🧰 ENVIRONMENTS & DEPENDENCIES
+# ==============================
+.venv/
+.env
+.env.*
+*.lock
+poetry.lock
+
+# Если ты хранишь lock-файл в репозитории — убери строку выше
+
+# ==============================
+#  DATA & STORAGE
+# ==============================
+data_storage/
+datasets/
+tmp/
+*.csv
+*.xlsx
+*.xls
+*.parquet
+*.pkl
+*.joblib
+*.h5
+*.model
+*.sav
+*.bin
+*.npy
+*.npz
+
+# ==============================
+#  JUPYTER NOTEBOOKS
+# ==============================
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+*.nbconvert.ipynb
+
+# ==============================
+#  CONFIGS / LOCAL SETTINGS
+# ==============================
+.vscode/
+.idea/
+*.code-workspace
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+
+# ==============================
+#  LOGS / DEBUG
+# ==============================
+*.log
+logs/
+*.tmp
+*.bak
+*.swp
+*.swo
+
+# ==============================
+#  TESTS / RESULTS
+# ==============================
+.coverage
+htmlcov/
+.cache/
+pytest_cache/
+.tox/
+.mypy_cache/
+.pytest_cache/
+*.coverage
+*.cover
+coverage.xml
+nosetests.xml
+
+# ==============================
+# GRPC GENERATED FILES (optional)
+# ==============================
+*_pb2.py
+*_pb2_grpc.py
+
+# ==============================
+# MACHINE LEARNING ARTIFACTS
+# ==============================
+models/
+checkpoints/
+runs/
+mlruns/
+tensorboard/
+wandb/
+lightning_logs/
+artifacts/
+*.pth
+*.pt
+
+# ==============================
+#  FRONTEND / STREAMLIT CACHE
+# ==============================
+.streamlit/
+frontend/__pycache__/
+frontend/.streamlit/
+frontend/__pycache__/
+.gradio/
+
+# ==============================
+#  LOCAL DEV TOOLS
+# ==============================
+*.iml
+*.idea/
+*.project
+*.classpath
+*.settings/
+__workspace__/
+.history
