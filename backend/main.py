@@ -6,7 +6,7 @@ from botocore.exceptions import ClientError
 from backend.storage_manager import s3_client_factory
 from backend.utils.settings import settings
 from backend.utils.logger import setup_logging, get_logger
-from backend.routers import health
+from backend.routers import health, dataset_management, ml
 
 setup_logging()
 logger = get_logger("backend")
@@ -30,7 +30,7 @@ async def lifespan(app: FastAPI):
             await s3.head_bucket(Bucket=settings.s3_bucket)
             logger.info(f"S3 bucket '{settings.s3_bucket}' найден, подключение успешно")
         except ClientError as e:
-            code = e.response["Error"]["Code"]
+            code: str = e.response["Error"]["Code"]
             if code == "404":
                 await s3.create_bucket(Bucket=settings.s3_bucket)
                 logger.info(f"S3 bucket '{settings.s3_bucket}' не найден — создан автоматически")
@@ -47,3 +47,5 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(health.router)
+app.include_router(dataset_management.router)
+app.include_router(ml.router)

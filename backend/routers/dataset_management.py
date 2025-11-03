@@ -1,0 +1,119 @@
+from fastapi import APIRouter, UploadFile, File, HTTPException, status, Depends
+import pandas as pd
+import numpy as np
+import io
+
+from backend.dataset_registry import (
+    upload_file,
+    delete_file,
+    load_dataframe,
+    get_storage_usage_mb,
+)
+from backend.utils.dependents import get_s3_client_factory
+
+router = APIRouter(
+    prefix="/dataset_registry",
+    tags=["Storage"],
+)
+
+
+@router.get("/usage/{user_id}", status_code=status.HTTP_200_OK)
+async def get_user_storage_usage(user_id: str, s3_client_factory=Depends(get_s3_client_factory)):
+    """
+    Получить объём хранилища, занимаемый пользователем.
+    """
+    usage = await get_storage_usage_mb(user_id, s3_client_factory)
+    if usage is None:
+        return {"user_id": user_id, "usage_mb": 0.0}
+    return {"user_id": user_id, "usage_mb": round(usage, 2)}
+
+
+@router.post("/upload/{user_id}", status_code=status.HTTP_200_OK)
+async def upload_user_file(user_id: str, uploaded_file: UploadFile = File(...), s3_client_factory=Depends(get_s3_client_factory)):
+    """
+    Загрузить parquet-файл пользователя в S3.
+    """
+
+    try:
+        contents = await uploaded_file.read()
+        filename = uploaded_file.filename.lower()
+
+        if filename.endswith(".csv"):
+            df = pd.read_csv(io.BytesIO(contents))
+        elif filename.endswith(".parquet"):
+            df = pd.read_parquet(io.BytesIO(contents), engine="pyarrow")
+        elif filename.endswith(".xlsx"):
+            df = pd.read_excel(io.BytesIO(contents))
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                detail="Поддерживаются только файлы .csv, .xlsx и .parquet",
+            )
+
+        parquet_buffer = io.BytesIO()
+        df.to_parquet(parquet_buffer, index=False, engine="pyarrow")
+        parquet_buffer.seek(0)
+
+        data_id = await upload_file(
+            user_id=user_id,
+            file_bytes=parquet_buffer.getvalue(),
+            file_name=uploaded_file.filename,
+            s3_client_factory=s3_client_factory,
+        )
+
+        if data_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Пользователь {user_id} превысил квоту в 200 МБ",
+            )
+
+        return {
+            "user_id": user_id,
+            "data_id": data_id,
+            "filename": uploaded_file.filename,
+            "status": "converted_to_parquet",
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка при загрузке файла пользователем {user_id}: {str(e)}")
+
+
+@router.delete("/delete/{user_id}/{data_id}", status_code=status.HTTP_200_OK)
+async def delete_user_file(user_id: str, data_id: str, s3_client_factory=Depends(get_s3_client_factory)):
+    """
+    Удалить файл пользователя по ID.
+    """
+    deleted = await delete_file(user_id, data_id, s3_client_factory)
+    if deleted is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Файл {data_id} пользователя {user_id} не найден",
+        )
+    return {"user_id": user_id, "data_id": data_id, "status": "deleted"}
+
+
+@router.get("/load/{user_id}/{data_id}", status_code=status.HTTP_200_OK)
+async def load_user_dataframe(user_id: str, data_id: str, s3_client_factory=Depends(get_s3_client_factory)):
+    """
+    Семл данных пользователя и информация о данных.
+    """
+    df: pd.DataFrame | None = await load_dataframe(user_id, data_id, s3_client_factory)
+
+    if df is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Файл {data_id} пользователя {user_id} не найден",
+        )
+    
+    df = df.replace({np.nan: None, np.inf: None, -np.inf: None})
+    sample = df.head(5).to_dict(orient="records")
+
+    return {
+        "user_id": user_id,
+        "data_id": data_id,
+        "columns": list(df.columns),
+        "rows": len(df),
+        "sample": sample,
+    }
