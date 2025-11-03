@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  # Запускаем проверки при каждом push и pull request
+  push:
+    branches: [dev, main, feature/*]
+  pull_request:
+    branches: [dev, main, frontend, backend]
+
+jobs:
+  lint-and-test:
+    name: Lint & Pre-commit
+    runs-on: ubuntu-latest
+
+    steps:
+      # Клонируем репозиторий
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      #  Устанавливаем Python (версию как в твоём pyproject)
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Ставим Poetry
+      - name: Install Poetry
+        run: pip install poetry
+
+      # Устанавливаем зависимости
+      - name: Install dependencies
+        run: poetry install
+
+      # проверяем линтером и хуками
+      - name: Run pre-commit checks
+        run: poetry run pre-commit run --all-files

@@ -1,13 +1,14 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, status, Depends
-import pandas as pd
-import numpy as np
 import io
 
+import numpy as np
+import pandas as pd
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+
 from backend.dataset_registry import (
-    upload_file,
     delete_file,
-    load_dataframe,
     get_storage_usage_mb,
+    load_dataframe,
+    upload_file,
 )
 from backend.utils.dependents import get_s3_client_factory
 
@@ -18,7 +19,9 @@ router = APIRouter(
 
 
 @router.get("/usage/{user_id}", status_code=status.HTTP_200_OK)
-async def get_user_storage_usage(user_id: str, s3_client_factory=Depends(get_s3_client_factory)):
+async def get_user_storage_usage(
+    user_id: str, s3_client_factory=Depends(get_s3_client_factory)
+):
     """
     Получить объём хранилища, занимаемый пользователем.
     """
@@ -29,7 +32,11 @@ async def get_user_storage_usage(user_id: str, s3_client_factory=Depends(get_s3_
 
 
 @router.post("/upload/{user_id}", status_code=status.HTTP_200_OK)
-async def upload_user_file(user_id: str, uploaded_file: UploadFile = File(...), s3_client_factory=Depends(get_s3_client_factory)):
+async def upload_user_file(
+    user_id: str,
+    uploaded_file: UploadFile = File(...),
+    s3_client_factory=Depends(get_s3_client_factory),
+):
     """
     Загрузить parquet-файл пользователя в S3.
     """
@@ -77,11 +84,16 @@ async def upload_user_file(user_id: str, uploaded_file: UploadFile = File(...), 
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Ошибка при загрузке файла пользователем {user_id}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Ошибка при загрузке файла пользователем {user_id}: {str(e)}",
+        )
 
 
 @router.delete("/delete/{user_id}/{data_id}", status_code=status.HTTP_200_OK)
-async def delete_user_file(user_id: str, data_id: str, s3_client_factory=Depends(get_s3_client_factory)):
+async def delete_user_file(
+    user_id: str, data_id: str, s3_client_factory=Depends(get_s3_client_factory)
+):
     """
     Удалить файл пользователя по ID.
     """
@@ -95,7 +107,9 @@ async def delete_user_file(user_id: str, data_id: str, s3_client_factory=Depends
 
 
 @router.get("/load/{user_id}/{data_id}", status_code=status.HTTP_200_OK)
-async def load_user_dataframe(user_id: str, data_id: str, s3_client_factory=Depends(get_s3_client_factory)):
+async def load_user_dataframe(
+    user_id: str, data_id: str, s3_client_factory=Depends(get_s3_client_factory)
+):
     """
     Семл данных пользователя и информация о данных.
     """
@@ -106,7 +120,7 @@ async def load_user_dataframe(user_id: str, data_id: str, s3_client_factory=Depe
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Файл {data_id} пользователя {user_id} не найден",
         )
-    
+
     df = df.replace({np.nan: None, np.inf: None, -np.inf: None})
     sample = df.head(5).to_dict(orient="records")
 
