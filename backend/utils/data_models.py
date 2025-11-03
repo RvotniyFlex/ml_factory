@@ -57,3 +57,8 @@ class ModelScore(BaseModel):
 class FitResult(BaseModel):
     name: str = Field(description="Название модели")
     scores: list[ModelScore] = Field(description="Список метрик модели")
+
+
+class DatasetInfo(BaseModel):
+    name: str = Field(description="Название датасета")
+    data_id: str = Field(description="id датасета")

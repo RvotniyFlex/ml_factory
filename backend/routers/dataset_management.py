@@ -78,7 +78,6 @@ async def upload_user_file(
             "user_id": user_id,
             "data_id": data_id,
             "filename": uploaded_file.filename,
-            "status": "converted_to_parquet",
         }
 
     except HTTPException:

@@ -1,4 +1,5 @@
 import io
+import json
 from typing import Awaitable, Callable
 
 import joblib
@@ -7,8 +8,9 @@ from aiobotocore.client import AioBaseClient
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from backend.dataset_registry import load_dataframe
+from backend.preprocessing import preprocess_dataset
 from backend.training import save_trained_model, train_regressor_task
-from backend.utils.data_models import RunConfig
+from backend.utils.data_models import DatasetPreprocessing, RunConfig
 from backend.utils.dependents import get_s3_client_factory
 from backend.utils.logger import get_logger
 from backend.utils.settings import settings
@@ -34,11 +36,13 @@ async def train_model_endpoint(
         if df is None:
             raise HTTPException(status_code=404, detail="Датасет не найден")
 
-        model, fit_result = train_regressor_task(df, run_config)
+        model, preprocessing_config, fit_result = train_regressor_task(df, run_config)
 
         model_name = fit_result.name
         s3_key = await save_trained_model(
             model=model,
+            preprocessing_config=preprocessing_config,
+            scores=fit_result,
             user_id=user_id,
             data_id=data_id,
             model_name=model_name,
@@ -64,7 +68,8 @@ async def train_model_endpoint(
 
 
 @router.post(
-    "/predict/{user_id}/{data_id}/{model_name}", status_code=status.HTTP_200_OK
+    "/predict/{user_id}/{data_id}/{model_name}",
+    status_code=status.HTTP_200_OK,
 )
 async def predict_endpoint(
     user_id: str,
@@ -79,26 +84,68 @@ async def predict_endpoint(
     Делает предсказание по обученной модели пользователя.
     Ожидает JSON: [{"feature1": val1, "feature2": val2, ...}, ...]
     """
+    model_key = f"users/{user_id}/models/{data_id}/{model_name}/model.joblib"
+    preprocessing_key = (
+        f"users/{user_id}/models/{data_id}/{model_name}/preprocessing.json"
+    )
+
     try:
-        key = f"models/{user_id}/{data_id}/{model_name}.joblib"
-
         async with await s3_client_factory() as s3:
-            obj = await s3.get_object(Bucket=settings.s3_bucket, Key=key)
-            data = await obj["Body"].read()
+            try:
+                preproc_obj = await s3.get_object(
+                    Bucket=settings.s3_bucket, Key=preprocessing_key
+                )
+                preproc_data = await preproc_obj["Body"].read()
+                preprocessing_dict = json.loads(preproc_data.decode("utf-8"))
+                preprocessing_config = DatasetPreprocessing(**preprocessing_dict)
+                logger.info(f"Препроцессинг {preprocessing_key} успешно загружен.")
+            except s3.exceptions.NoSuchKey:
+                raise HTTPException(
+                    status_code=404, detail="Файл preprocessing.json не найден."
+                )
+            except Exception as e:
+                logger.exception(f"Ошибка при загрузке preprocessing.json: {e}")
+                raise HTTPException(
+                    status_code=500,
+                    detail="Ошибка при чтении конфигурации препроцессинга.",
+                )
 
-        model = joblib.load(io.BytesIO(data))
-        df = pd.DataFrame(input_data)
+            try:
+                model_obj = await s3.get_object(
+                    Bucket=settings.s3_bucket, Key=model_key
+                )
+                model_bytes = await model_obj["Body"].read()
+                model = joblib.load(io.BytesIO(model_bytes))
+                logger.info(f"Модель {model_name} успешно загружена из S3.")
+            except s3.exceptions.NoSuchKey:
+                raise HTTPException(status_code=404, detail="Модель не найдена.")
+            except Exception as e:
+                logger.exception(f"Ошибка при загрузке модели {model_name}: {e}")
+                raise HTTPException(
+                    status_code=500, detail="Ошибка при загрузке модели."
+                )
 
-        preds = model.predict(df)
-        return {"predictions": preds.tolist()}
+        try:
+            df = pd.DataFrame(input_data)
+            df_preprocessed = preprocess_dataset(df, preprocessing_config)
+            preds = model.predict(df_preprocessed)
+            logger.info(f"Предсказание выполнено успешно. ({len(preds)} записей)")
+            return {"predictions": preds.tolist()}
+        except Exception as e:
+            logger.exception(f"Ошибка при предсказании: {e}")
+            raise HTTPException(
+                status_code=500, detail="Ошибка при обработке данных для предсказания."
+            )
 
-    except s3.exceptions.NoSuchKey:
-        raise HTTPException(status_code=404, detail="Модель не найдена")
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception(
             f"Ошибка при инференсе модели {model_name} пользователя {user_id}: {e}"
         )
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500, detail="Внутренняя ошибка сервера при предсказании."
+        )
 
 
 @router.delete(

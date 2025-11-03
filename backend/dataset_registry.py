@@ -74,7 +74,7 @@ async def upload_file(
         return None
 
     data_id: str = str(uuid.uuid4())
-    key: str = f"users/{user_id}/{data_id}.parquet"
+    key: str = f"users/{user_id}/datasets/{data_id}.parquet"
 
     async with await s3_client_factory() as s3:
         await s3.put_object(
@@ -109,7 +109,7 @@ async def delete_file(
     Returns:
         data_id (str | None): id файла в хранилище или None, если файл не найден
     """
-    prefix: str = f"users/{user_id}/{data_id}"
+    prefix: str = f"users/{user_id}/datasets/{data_id}"
 
     async with await s3_client_factory() as s3:
         response: dict = await s3.list_objects_v2(
@@ -145,7 +145,7 @@ async def load_dataframe(
     Returns:
         data (pd.DataFrame | None): DataFrame из файла или None, если файл не найден
     """
-    prefix: str = f"users/{user_id}/{data_id}.parquet"
+    prefix: str = f"users/{user_id}/datasets/{data_id}.parquet"
 
     async with await s3_client_factory() as s3:
         response: dict = await s3.list_objects_v2(
