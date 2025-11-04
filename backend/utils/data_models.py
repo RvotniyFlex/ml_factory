@@ -18,7 +18,6 @@ class ModelConfig(BaseModel):
     hyperparameters: GBRHParams | ElasticNetParams = Field(
         description="Гиперпараметры модели"
     )
-    target: str = Field(description="Целевая переменная")
     model_class: Literal["GradientBoostingRegressor", "ElasticNet"] = Field(
         description="Класс модели"
     )
@@ -39,6 +38,7 @@ class DatasetPreprocessing(BaseModel):
     dataset_preprocessing: list[ColumnPreprocessing] = Field(
         description="Список преобразований данных"
     )
+    target: str = Field(description="Целевая переменная")
 
 
 class RunConfig(BaseModel):

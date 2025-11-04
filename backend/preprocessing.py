@@ -27,7 +27,7 @@ def preprocess_dataset(
     for col in preprocessing_cfg.dataset_preprocessing:
         col_name = col.name
 
-        if col_name not in df.columns:
+        if (col_name not in df.columns) and (col_name != preprocessing_cfg.target):
             raise ValueError(f"Колонка {col_name} не найдена в данных")
 
         if col.fillna_policy is None:

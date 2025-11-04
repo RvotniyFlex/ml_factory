@@ -42,7 +42,7 @@ def train_regressor_task(
     """
 
     df_processed: pd.DataFrame = preprocess_dataset(df, config.preprocessing_config)
-    target: str = config.ml_config.target
+    target: str = config.preprocessing_config.target
 
     if target not in df_processed.columns:
         logger.error(f"Целевая переменная '{target}' не найдена в данных")

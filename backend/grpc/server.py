@@ -282,6 +282,8 @@ class ModelService(contracts_pb2_grpc.ModelServiceServicer):
 
             df = pd.DataFrame(json.loads(request.input_data_json))
             df_preprocessed = preprocess_dataset(df, preprocessing_config)
+
+            print(df_preprocessed)
             preds = model.predict(df_preprocessed)
 
             return contracts_pb2.PredictResponse(predictions=[float(p) for p in preds])
