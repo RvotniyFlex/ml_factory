@@ -162,7 +162,7 @@ async def delete_model_endpoint(
     """
     Удаляет сохранённую модель из S3.
     """
-    key = f"models/{user_id}/{data_id}/{model_name}.joblib"
+    key = f"users/{user_id}/models/{data_id}/{model_name}/"
 
     try:
         async with await s3_client_factory() as s3:
@@ -171,7 +171,10 @@ async def delete_model_endpoint(
                 raise HTTPException(
                     status_code=404, detail=f"Модель {model_name} не найдена"
                 )
-            await s3.delete_object(Bucket=settings.s3_bucket, Key=key)
+            delete_list = [{"Key": obj["Key"]} for obj in response["Contents"]]
+            await s3.delete_objects(
+                Bucket=settings.s3_bucket, Delete={"Objects": delete_list}
+            )
 
         logger.info(f"Модель {model_name} пользователя {user_id} удалена из S3")
         return {
