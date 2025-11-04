@@ -123,6 +123,11 @@ async def load_user_dataframe(
     df: pd.DataFrame = df.replace({np.nan: None, np.inf: None, -np.inf: None})
     na_columns: dict = df.isna().sum().to_dict()
 
+    col_type = {}
+    for col in df.columns:
+        data_type = "categorical" if df[col].dtype == "object" else "numerical"
+        col_type[col] = data_type
+
     sample = df.head(5).to_dict(orient="records")
 
     return {
@@ -130,6 +135,7 @@ async def load_user_dataframe(
         "data_id": data_id,
         "columns": list(df.columns),
         "na_columns": na_columns,
+        "col_type": col_type,
         "rows": len(df),
         "sample": sample,
     }
