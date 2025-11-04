@@ -64,6 +64,6 @@ def preprocess_dataset(
             )
             df = pd.concat([df.drop(columns=[col_name]), ohe_df], axis=1)
 
-        df = df.dropna()
+    df = df.dropna()
 
     return df

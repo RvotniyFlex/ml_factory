@@ -120,13 +120,16 @@ async def load_user_dataframe(
             detail=f"Файл {data_id} пользователя {user_id} не найден",
         )
 
-    df = df.replace({np.nan: None, np.inf: None, -np.inf: None})
+    df: pd.DataFrame = df.replace({np.nan: None, np.inf: None, -np.inf: None})
+    na_columns: dict = df.isna().sum().to_dict()
+
     sample = df.head(5).to_dict(orient="records")
 
     return {
         "user_id": user_id,
         "data_id": data_id,
         "columns": list(df.columns),
+        "na_columns": na_columns,
         "rows": len(df),
         "sample": sample,
     }

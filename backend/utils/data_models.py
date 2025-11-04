@@ -22,7 +22,6 @@ class ModelConfig(BaseModel):
     model_class: Literal["GradientBoostingRegressor", "ElasticNet"] = Field(
         description="Класс модели"
     )
-    data_id: str = Field(description="id датасета")
 
 
 class ColumnPreprocessing(BaseModel):
