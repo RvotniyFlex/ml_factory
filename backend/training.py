@@ -51,7 +51,8 @@ def train_regressor_task(
 
     if target not in df_processed.columns:
         logger.error(f"Целевая переменная '{target}' не найдена в данных")
-        return FitResult(name="No target", scores=[])
+        # return None, None, FitResult(name="No target", scores=[]), None
+        raise ValueError(f"Целевая переменная '{target}' не найдена в данных")
 
     X: pd.DataFrame = df_processed.drop(columns=[target])
     y: pd.DataFrame = df_processed[target]
@@ -72,7 +73,8 @@ def train_regressor_task(
         )
     else:
         logger.error(f"Неизвестный класс модели: {model_class}")
-        return FitResult(name="No model class", scores=[])
+        # return None,None,  FitResult(name="No model class", scores=[]),None
+        raise ValueError(f"Неизвестный класс модели: {model_class}")
 
     model.fit(X, y)
     y_pred: pd.Series = model.predict(X)
