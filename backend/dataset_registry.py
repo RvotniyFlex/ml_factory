@@ -27,7 +27,7 @@ async def get_storage_usage_mb(
     Returns:
         total_memory: (float | None): размер папки пользователя в МБ или None, если папка пустая
     """
-    prefix = f"users/{user_id}/"
+    prefix: str = f"users/{user_id}/"
     total_bytes: float = 0.0
 
     async with await s3_client_factory() as s3:

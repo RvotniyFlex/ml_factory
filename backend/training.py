@@ -27,7 +27,9 @@ logger = get_logger("backend")
 
 def train_regressor_task(
     df: pd.DataFrame, config: RunConfig
-) -> tuple[ElasticNet | GradientBoostingRegressor, DatasetPreprocessing, FitResult]:
+) -> tuple[
+    ElasticNet | GradientBoostingRegressor, DatasetPreprocessing, FitResult, dict
+]:
     """
     Обучает модель (ElasticNet или GradientBoostingRegressor) по RunConfig.
 
@@ -39,9 +41,12 @@ def train_regressor_task(
         model (ElasticNet | GradientBoostingRegressor): обученная модель
         preprocessing_config (DatasetPreprocessing): конфигурация предобработки данных
         scores (FitResult): результат обучения с метриками
+        transformers (dict): словарь преобразователей данных
     """
 
-    df_processed: pd.DataFrame = preprocess_dataset(df, config.preprocessing_config)
+    df_processed, transformers = preprocess_dataset(
+        df, config.preprocessing_config, transformers={}
+    )
     target: str = config.preprocessing_config.target
 
     if target not in df_processed.columns:
@@ -75,20 +80,26 @@ def train_regressor_task(
     safe_params = re.sub(
         r"[^a-zA-Z0-9]", "_", json.dumps(params.model_dump(), sort_keys=True)
     )
-    model_name = f"{model_class}_{safe_params}"
+    model_name: str = f"{model_class}_{safe_params}"
 
-    scores = [
+    scores: list = [
         ModelScore(name="R2", value=float(r2_score(y, y_pred))),
         ModelScore(name="MSE", value=float(mean_squared_error(y, y_pred))),
         ModelScore(name="MAE", value=float(mean_absolute_error(y, y_pred))),
     ]
 
-    return model, config.preprocessing_config, FitResult(name=model_name, scores=scores)
+    return (
+        model,
+        config.preprocessing_config,
+        FitResult(name=model_name, scores=scores),
+        transformers,
+    )
 
 
 async def save_trained_model(
     model,
     preprocessing_config: DatasetPreprocessing,
+    transformers: dict,
     scores: FitResult,
     user_id: str,
     data_id: str,
@@ -101,6 +112,7 @@ async def save_trained_model(
     Args:
         model: обученная модель sklearn
         preprocessing_config (dict): конфигурация предобработки данных
+        transformers (dict): словарь преобразователей данных
         scores (dict): метрики модели
         user_id (str): идентификатор пользователя
         data_id (str): идентификатор набора данных
@@ -111,7 +123,7 @@ async def save_trained_model(
         s3_key (str | None): путь к модели в S3, None — если не удалось сохранить
     """
     try:
-        key = f"users/{user_id}/models/{data_id}/{model_name}"
+        key: str = f"users/{user_id}/models/{data_id}/{model_name}"
         buffer = io.BytesIO()
         joblib.dump(model, buffer)
         buffer.seek(0)
@@ -142,6 +154,17 @@ async def save_trained_model(
                     scores.model_dump(), ensure_ascii=False, indent=2
                 ).encode("utf-8"),
                 ContentType="application/json",
+            )
+
+        buffer = io.BytesIO()
+        joblib.dump(transformers, buffer)
+        buffer.seek(0)
+        async with await s3_client_factory() as s3:
+            await s3.put_object(
+                Bucket=settings.s3_bucket,
+                Key=key + "/transformers.joblib",
+                Body=buffer.getvalue(),
+                ContentType="application/octet-stream",
             )
 
         logger.info(

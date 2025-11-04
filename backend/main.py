@@ -4,8 +4,8 @@ import aioboto3
 from botocore.exceptions import ClientError
 from fastapi import FastAPI
 
-from backend.routers import client, dataset_management, health, ml
-from backend.storage_manager import s3_client_factory
+from backend.routers import client, dataset_management, health, ml_management
+from backend.s3_connector import s3_client_factory
 from backend.utils.logger import get_logger, setup_logging
 from backend.utils.settings import settings
 
@@ -53,5 +53,5 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 app.include_router(health.router)
 app.include_router(dataset_management.router)
-app.include_router(ml.router)
+app.include_router(ml_management.router)
 app.include_router(client.router)

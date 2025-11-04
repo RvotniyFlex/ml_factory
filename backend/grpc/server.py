@@ -19,7 +19,7 @@ from backend.dataset_registry import (
 # ===== gRPC контракты =====
 from backend.grpc.contracts import contracts_pb2, contracts_pb2_grpc
 from backend.preprocessing import preprocess_dataset
-from backend.storage_manager import s3_client_factory
+from backend.s3_connector import s3_client_factory
 from backend.training import save_trained_model, train_regressor_task
 from backend.user_object import (
     get_user_datasets,

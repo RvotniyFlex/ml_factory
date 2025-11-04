@@ -24,23 +24,27 @@ async def get_user_datasets(
     Returns:
         datasets (list[DatasetInfo]): cписок датасетов
     """
-    prefix = f"users/{user_id}/datasets/"
+    prefix: str = f"users/{user_id}/datasets/"
     datasets: list[DatasetInfo] = []
 
     async with await s3_client_factory() as s3:
-        response = await s3.list_objects_v2(Bucket=settings.s3_bucket, Prefix=prefix)
+        response: dict = await s3.list_objects_v2(
+            Bucket=settings.s3_bucket, Prefix=prefix
+        )
 
         if "Contents" not in response:
             return []
 
         for obj in response["Contents"]:
-            key = obj["Key"]
+            key: str = obj["Key"]
             if not key.endswith(".parquet"):
                 continue
 
-            dataset_id = key.split("/")[-1].replace(".parquet", "")
-            meta = await s3.head_object(Bucket=settings.s3_bucket, Key=key)
-            original_name = meta.get("Metadata", {}).get("original-filename", "unknown")
+            dataset_id: str = key.split("/")[-1].replace(".parquet", "")
+            meta: str = await s3.head_object(Bucket=settings.s3_bucket, Key=key)
+            original_name: str = meta.get("Metadata", {}).get(
+                "original-filename", "unknown"
+            )
 
             datasets.append(
                 DatasetInfo(
@@ -68,19 +72,21 @@ async def get_user_models(
     Returns:
         model_names (list[str]): cписок моделей
     """
-    prefix = f"users/{user_id}/models/{data_id}/"
+    prefix: str = f"users/{user_id}/models/{data_id}/"
     model_names: list[str] = []
 
     async with await s3_client_factory() as s3:
-        response = await s3.list_objects_v2(Bucket=settings.s3_bucket, Prefix=prefix)
+        response: dict = await s3.list_objects_v2(
+            Bucket=settings.s3_bucket, Prefix=prefix
+        )
 
         if "Contents" not in response:
             return []
 
         for obj in response["Contents"]:
-            key = obj["Key"]
+            key: str = obj["Key"]
             if key.endswith(".joblib"):
-                model_name = key.split("/")[-2]
+                model_name: str = key.split("/")[-2]
                 model_names.append(model_name)
 
     return model_names
@@ -106,21 +112,23 @@ async def get_user_scores(
     results: list[FitResult] = []
 
     async with await s3_client_factory() as s3:
-        response = await s3.list_objects_v2(Bucket=settings.s3_bucket, Prefix=prefix)
+        response: str = await s3.list_objects_v2(
+            Bucket=settings.s3_bucket, Prefix=prefix
+        )
 
         if "Contents" not in response:
             return []
 
         for obj in response["Contents"]:
-            key = obj["Key"]
+            key: str = obj["Key"]
             if key.endswith("scores.json"):
                 try:
-                    res = await s3.get_object(Bucket=settings.s3_bucket, Key=key)
-                    data = await res["Body"].read()
-                    scores_json = json.loads(data.decode("utf-8"))
+                    res: dict = await s3.get_object(Bucket=settings.s3_bucket, Key=key)
+                    data: bytes = await res["Body"].read()
+                    scores_json: dict = json.loads(data.decode("utf-8"))
 
-                    model_name = key.split("/")[-2]
-                    scores = [
+                    model_name: str = key.split("/")[-2]
+                    scores: list = [
                         ModelScore(name=s["name"], value=float(s["value"]))
                         for s in scores_json.get("scores", [])
                     ]
