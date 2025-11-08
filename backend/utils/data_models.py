@@ -14,6 +14,19 @@ class ElasticNetParams(BaseModel):
     l1_ratio: float = Field(description="Соотношение между L1 и L2 регуляризацией")
 
 
+class ModelDescription(BaseModel):
+    name: Literal["ElasticNet", "GradientBoostingRegressor"] = Field(
+        description="Название модели"
+    )
+    hyperparameters: GBRHParams | ElasticNetParams = Field(
+        description="Гиперпараметры модели"
+    )
+
+
+class AvailableModels(BaseModel):
+    models: list[ModelDescription] = Field(description="Список доступных моделей")
+
+
 class ModelConfig(BaseModel):
     hyperparameters: GBRHParams | ElasticNetParams = Field(
         description="Гиперпараметры модели"

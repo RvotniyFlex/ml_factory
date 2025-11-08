@@ -20,7 +20,7 @@ _sym_db = _symbol_database.Default()
 
 
 DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(
-    b'\n\x0f\x63ontracts.proto\x12\tmlfactory"\x0f\n\rHealthRequest"!\n\x0fS3HealthRequest\x12\x0e\n\x06\x62ucket\x18\x01 \x01(\t"9\n\x0eHealthResponse\x12\x0b\n\x03\x61pp\x18\x01 \x01(\t\x12\n\n\x02s3\x18\x02 \x01(\t\x12\x0e\n\x06\x62ucket\x18\x03 \x01(\t"\x1e\n\x0bUserRequest\x12\x0f\n\x07user_id\x18\x01 \x01(\t"4\n\x10UserModelRequest\x12\x0f\n\x07user_id\x18\x01 \x01(\t\x12\x0f\n\x07\x64\x61ta_id\x18\x02 \x01(\t",\n\x0b\x44\x61tasetInfo\x12\x0f\n\x07\x64\x61ta_id\x18\x01 \x01(\t\x12\x0c\n\x04name\x18\x02 \x01(\t")\n\nModelScore\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x01"@\n\tFitResult\x12\x0c\n\x04name\x18\x01 \x01(\t\x12%\n\x06scores\x18\x02 \x03(\x0b\x32\x15.mlfactory.ModelScore"M\n\x10\x44\x61tasetsResponse\x12\x0f\n\x07user_id\x18\x01 \x01(\t\x12(\n\x08\x64\x61tasets\x18\x02 \x03(\x0b\x32\x16.mlfactory.DatasetInfo"B\n\x0eModelsResponse\x12\x0f\n\x07user_id\x18\x01 \x01(\t\x12\x0f\n\x07\x64\x61ta_id\x18\x02 \x01(\t\x12\x0e\n\x06models\x18\x03 \x03(\t"X\n\x0eScoresResponse\x12\x0f\n\x07user_id\x18\x01 \x01(\t\x12\x0f\n\x07\x64\x61ta_id\x18\x02 \x01(\t\x12$\n\x06scores\x18\x03 \x03(\x0b\x32\x14.mlfactory.FitResult"/\n\x0b\x46ileRequest\x12\x0f\n\x07user_id\x18\x01 \x01(\t\x12\x0f\n\x07\x64\x61ta_id\x18\x02 \x01(\t"F\n\rUploadRequest\x12\x0f\n\x07user_id\x18\x01 \x01(\t\x12\x10\n\x08\x66ilename\x18\x02 \x01(\t\x12\x12\n\nfile_bytes\x18\x03 \x01(\x0c"D\n\x0eUploadResponse\x12\x0f\n\x07user_id\x18\x01 \x01(\t\x12\x0f\n\x07\x64\x61ta_id\x18\x02 \x01(\t\x12\x10\n\x08\x66ilename\x18\x03 \x01(\t"2\n\rUsageResponse\x12\x0f\n\x07user_id\x18\x01 \x01(\t\x12\x10\n\x08usage_mb\x18\x02 \x01(\x01"B\n\x0e\x44\x65leteResponse\x12\x0f\n\x07user_id\x18\x01 \x01(\t\x12\x0f\n\x07\x64\x61ta_id\x18\x02 \x01(\t\x12\x0e\n\x06status\x18\x03 \x01(\t"d\n\x0cLoadResponse\x12\x0f\n\x07user_id\x18\x01 \x01(\t\x12\x0f\n\x07\x64\x61ta_id\x18\x02 \x01(\t\x12\x0f\n\x07\x63olumns\x18\x03 \x03(\t\x12\x0c\n\x04rows\x18\x04 \x01(\x05\x12\x13\n\x0bsample_json\x18\x05 \x01(\t"I\n\x0cTrainRequest\x12\x0f\n\x07user_id\x18\x01 \x01(\t\x12\x0f\n\x07\x64\x61ta_id\x18\x02 \x01(\t\x12\x17\n\x0frun_config_json\x18\x03 \x01(\t"k\n\rTrainResponse\x12\x0f\n\x07user_id\x18\x01 \x01(\t\x12\x0f\n\x07\x64\x61ta_id\x18\x02 \x01(\t\x12\x12\n\nmodel_name\x18\x03 \x01(\t\x12\x0e\n\x06s3_key\x18\x04 \x01(\t\x12\x14\n\x0cmetrics_json\x18\x05 \x01(\t"_\n\x0ePredictRequest\x12\x0f\n\x07user_id\x18\x01 \x01(\t\x12\x0f\n\x07\x64\x61ta_id\x18\x02 \x01(\t\x12\x12\n\nmodel_name\x18\x03 \x01(\t\x12\x17\n\x0finput_data_json\x18\x04 \x01(\t"&\n\x0fPredictResponse\x12\x13\n\x0bpredictions\x18\x01 \x03(\x01"E\n\rDeleteRequest\x12\x0f\n\x07user_id\x18\x01 \x01(\t\x12\x0f\n\x07\x64\x61ta_id\x18\x02 \x01(\t\x12\x12\n\nmodel_name\x18\x03 \x01(\t"[\n\x13ModelDeleteResponse\x12\x0f\n\x07user_id\x18\x01 \x01(\t\x12\x0f\n\x07\x64\x61ta_id\x18\x02 \x01(\t\x12\x12\n\nmodel_name\x18\x03 \x01(\t\x12\x0e\n\x06status\x18\x04 \x01(\t2\x92\x01\n\rHealthService\x12?\n\x08\x43heckApp\x12\x18.mlfactory.HealthRequest\x1a\x19.mlfactory.HealthResponse\x12@\n\x07\x43heckS3\x12\x1a.mlfactory.S3HealthRequest\x1a\x19.mlfactory.HealthResponse2\xe5\x01\n\x12UserStorageService\x12\x43\n\x0cListDatasets\x12\x16.mlfactory.UserRequest\x1a\x1b.mlfactory.DatasetsResponse\x12\x44\n\nListModels\x12\x1b.mlfactory.UserModelRequest\x1a\x19.mlfactory.ModelsResponse\x12\x44\n\nListScores\x12\x1b.mlfactory.UserModelRequest\x1a\x19.mlfactory.ScoresResponse2\x99\x02\n\x16\x44\x61tasetRegistryService\x12<\n\x08GetUsage\x12\x16.mlfactory.UserRequest\x1a\x18.mlfactory.UsageResponse\x12\x41\n\nUploadFile\x12\x18.mlfactory.UploadRequest\x1a\x19.mlfactory.UploadResponse\x12?\n\nDeleteFile\x12\x16.mlfactory.FileRequest\x1a\x19.mlfactory.DeleteResponse\x12=\n\nLoadSample\x12\x16.mlfactory.FileRequest\x1a\x17.mlfactory.LoadResponse2\xd0\x01\n\x0cModelService\x12:\n\x05Train\x12\x17.mlfactory.TrainRequest\x1a\x18.mlfactory.TrainResponse\x12@\n\x07Predict\x12\x19.mlfactory.PredictRequest\x1a\x1a.mlfactory.PredictResponse\x12\x42\n\x06\x44\x65lete\x12\x18.mlfactory.DeleteRequest\x1a\x1e.mlfactory.ModelDeleteResponseb\x06proto3'
+    b'\n\x0f\x63ontracts.proto\x12\tmlfactory"\x0f\n\rHealthRequest"!\n\x0fS3HealthRequest\x12\x0e\n\x06\x62ucket\x18\x01 \x01(\t"9\n\x0eHealthResponse\x12\x0b\n\x03\x61pp\x18\x01 \x01(\t\x12\n\n\x02s3\x18\x02 \x01(\t\x12\x0e\n\x06\x62ucket\x18\x03 \x01(\t"\x1e\n\x0bUserRequest\x12\x0f\n\x07user_id\x18\x01 \x01(\t"4\n\x10UserModelRequest\x12\x0f\n\x07user_id\x18\x01 \x01(\t\x12\x0f\n\x07\x64\x61ta_id\x18\x02 \x01(\t",\n\x0b\x44\x61tasetInfo\x12\x0f\n\x07\x64\x61ta_id\x18\x01 \x01(\t\x12\x0c\n\x04name\x18\x02 \x01(\t")\n\nModelScore\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x01"@\n\tFitResult\x12\x0c\n\x04name\x18\x01 \x01(\t\x12%\n\x06scores\x18\x02 \x03(\x0b\x32\x15.mlfactory.ModelScore"M\n\x10\x44\x61tasetsResponse\x12\x0f\n\x07user_id\x18\x01 \x01(\t\x12(\n\x08\x64\x61tasets\x18\x02 \x03(\x0b\x32\x16.mlfactory.DatasetInfo"B\n\x0eModelsResponse\x12\x0f\n\x07user_id\x18\x01 \x01(\t\x12\x0f\n\x07\x64\x61ta_id\x18\x02 \x01(\t\x12\x0e\n\x06models\x18\x03 \x03(\t"X\n\x0eScoresResponse\x12\x0f\n\x07user_id\x18\x01 \x01(\t\x12\x0f\n\x07\x64\x61ta_id\x18\x02 \x01(\t\x12$\n\x06scores\x18\x03 \x03(\x0b\x32\x14.mlfactory.FitResult"/\n\x0b\x46ileRequest\x12\x0f\n\x07user_id\x18\x01 \x01(\t\x12\x0f\n\x07\x64\x61ta_id\x18\x02 \x01(\t"F\n\rUploadRequest\x12\x0f\n\x07user_id\x18\x01 \x01(\t\x12\x10\n\x08\x66ilename\x18\x02 \x01(\t\x12\x12\n\nfile_bytes\x18\x03 \x01(\x0c"D\n\x0eUploadResponse\x12\x0f\n\x07user_id\x18\x01 \x01(\t\x12\x0f\n\x07\x64\x61ta_id\x18\x02 \x01(\t\x12\x10\n\x08\x66ilename\x18\x03 \x01(\t"2\n\rUsageResponse\x12\x0f\n\x07user_id\x18\x01 \x01(\t\x12\x10\n\x08usage_mb\x18\x02 \x01(\x01"B\n\x0e\x44\x65leteResponse\x12\x0f\n\x07user_id\x18\x01 \x01(\t\x12\x0f\n\x07\x64\x61ta_id\x18\x02 \x01(\t\x12\x0e\n\x06status\x18\x03 \x01(\t"d\n\x0cLoadResponse\x12\x0f\n\x07user_id\x18\x01 \x01(\t\x12\x0f\n\x07\x64\x61ta_id\x18\x02 \x01(\t\x12\x0f\n\x07\x63olumns\x18\x03 \x03(\t\x12\x0c\n\x04rows\x18\x04 \x01(\x05\x12\x13\n\x0bsample_json\x18\x05 \x01(\t"\x07\n\x05\x45mpty"w\n\x14ModelHyperparameters\x12\x15\n\rlearning_rate\x18\x01 \x01(\x01\x12\x11\n\tmax_depth\x18\x02 \x01(\x05\x12\x14\n\x0cn_estimators\x18\x03 \x01(\x05\x12\r\n\x05\x61lpha\x18\x04 \x01(\x01\x12\x10\n\x08l1_ratio\x18\x05 \x01(\x01"Z\n\x10ModelDescription\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x38\n\x0fhyperparameters\x18\x02 \x01(\x0b\x32\x1f.mlfactory.ModelHyperparameters"F\n\x17\x41vailableModelsResponse\x12+\n\x06models\x18\x01 \x03(\x0b\x32\x1b.mlfactory.ModelDescription"I\n\x0cTrainRequest\x12\x0f\n\x07user_id\x18\x01 \x01(\t\x12\x0f\n\x07\x64\x61ta_id\x18\x02 \x01(\t\x12\x17\n\x0frun_config_json\x18\x03 \x01(\t"k\n\rTrainResponse\x12\x0f\n\x07user_id\x18\x01 \x01(\t\x12\x0f\n\x07\x64\x61ta_id\x18\x02 \x01(\t\x12\x12\n\nmodel_name\x18\x03 \x01(\t\x12\x0e\n\x06s3_key\x18\x04 \x01(\t\x12\x14\n\x0cmetrics_json\x18\x05 \x01(\t"_\n\x0ePredictRequest\x12\x0f\n\x07user_id\x18\x01 \x01(\t\x12\x0f\n\x07\x64\x61ta_id\x18\x02 \x01(\t\x12\x12\n\nmodel_name\x18\x03 \x01(\t\x12\x17\n\x0finput_data_json\x18\x04 \x01(\t"&\n\x0fPredictResponse\x12\x13\n\x0bpredictions\x18\x01 \x03(\x01"E\n\rDeleteRequest\x12\x0f\n\x07user_id\x18\x01 \x01(\t\x12\x0f\n\x07\x64\x61ta_id\x18\x02 \x01(\t\x12\x12\n\nmodel_name\x18\x03 \x01(\t"[\n\x13ModelDeleteResponse\x12\x0f\n\x07user_id\x18\x01 \x01(\t\x12\x0f\n\x07\x64\x61ta_id\x18\x02 \x01(\t\x12\x12\n\nmodel_name\x18\x03 \x01(\t\x12\x0e\n\x06status\x18\x04 \x01(\t2\x92\x01\n\rHealthService\x12?\n\x08\x43heckApp\x12\x18.mlfactory.HealthRequest\x1a\x19.mlfactory.HealthResponse\x12@\n\x07\x43heckS3\x12\x1a.mlfactory.S3HealthRequest\x1a\x19.mlfactory.HealthResponse2\xe5\x01\n\x12UserStorageService\x12\x43\n\x0cListDatasets\x12\x16.mlfactory.UserRequest\x1a\x1b.mlfactory.DatasetsResponse\x12\x44\n\nListModels\x12\x1b.mlfactory.UserModelRequest\x1a\x19.mlfactory.ModelsResponse\x12\x44\n\nListScores\x12\x1b.mlfactory.UserModelRequest\x1a\x19.mlfactory.ScoresResponse2\x99\x02\n\x16\x44\x61tasetRegistryService\x12<\n\x08GetUsage\x12\x16.mlfactory.UserRequest\x1a\x18.mlfactory.UsageResponse\x12\x41\n\nUploadFile\x12\x18.mlfactory.UploadRequest\x1a\x19.mlfactory.UploadResponse\x12?\n\nDeleteFile\x12\x16.mlfactory.FileRequest\x1a\x19.mlfactory.DeleteResponse\x12=\n\nLoadSample\x12\x16.mlfactory.FileRequest\x1a\x17.mlfactory.LoadResponse2\x9d\x02\n\x0cModelService\x12:\n\x05Train\x12\x17.mlfactory.TrainRequest\x1a\x18.mlfactory.TrainResponse\x12@\n\x07Predict\x12\x19.mlfactory.PredictRequest\x1a\x1a.mlfactory.PredictResponse\x12\x42\n\x06\x44\x65lete\x12\x18.mlfactory.DeleteRequest\x1a\x1e.mlfactory.ModelDeleteResponse\x12K\n\x13ListAvailableModels\x12\x10.mlfactory.Empty\x1a".mlfactory.AvailableModelsResponseb\x06proto3'
 )
 
 _globals = globals()
@@ -62,24 +62,32 @@ if not _descriptor._USE_C_DESCRIPTORS:
     _globals["_DELETERESPONSE"]._serialized_end = 928
     _globals["_LOADRESPONSE"]._serialized_start = 930
     _globals["_LOADRESPONSE"]._serialized_end = 1030
-    _globals["_TRAINREQUEST"]._serialized_start = 1032
-    _globals["_TRAINREQUEST"]._serialized_end = 1105
-    _globals["_TRAINRESPONSE"]._serialized_start = 1107
-    _globals["_TRAINRESPONSE"]._serialized_end = 1214
-    _globals["_PREDICTREQUEST"]._serialized_start = 1216
-    _globals["_PREDICTREQUEST"]._serialized_end = 1311
-    _globals["_PREDICTRESPONSE"]._serialized_start = 1313
-    _globals["_PREDICTRESPONSE"]._serialized_end = 1351
-    _globals["_DELETEREQUEST"]._serialized_start = 1353
-    _globals["_DELETEREQUEST"]._serialized_end = 1422
-    _globals["_MODELDELETERESPONSE"]._serialized_start = 1424
-    _globals["_MODELDELETERESPONSE"]._serialized_end = 1515
-    _globals["_HEALTHSERVICE"]._serialized_start = 1518
-    _globals["_HEALTHSERVICE"]._serialized_end = 1664
-    _globals["_USERSTORAGESERVICE"]._serialized_start = 1667
-    _globals["_USERSTORAGESERVICE"]._serialized_end = 1896
-    _globals["_DATASETREGISTRYSERVICE"]._serialized_start = 1899
-    _globals["_DATASETREGISTRYSERVICE"]._serialized_end = 2180
-    _globals["_MODELSERVICE"]._serialized_start = 2183
-    _globals["_MODELSERVICE"]._serialized_end = 2391
+    _globals["_EMPTY"]._serialized_start = 1032
+    _globals["_EMPTY"]._serialized_end = 1039
+    _globals["_MODELHYPERPARAMETERS"]._serialized_start = 1041
+    _globals["_MODELHYPERPARAMETERS"]._serialized_end = 1160
+    _globals["_MODELDESCRIPTION"]._serialized_start = 1162
+    _globals["_MODELDESCRIPTION"]._serialized_end = 1252
+    _globals["_AVAILABLEMODELSRESPONSE"]._serialized_start = 1254
+    _globals["_AVAILABLEMODELSRESPONSE"]._serialized_end = 1324
+    _globals["_TRAINREQUEST"]._serialized_start = 1326
+    _globals["_TRAINREQUEST"]._serialized_end = 1399
+    _globals["_TRAINRESPONSE"]._serialized_start = 1401
+    _globals["_TRAINRESPONSE"]._serialized_end = 1508
+    _globals["_PREDICTREQUEST"]._serialized_start = 1510
+    _globals["_PREDICTREQUEST"]._serialized_end = 1605
+    _globals["_PREDICTRESPONSE"]._serialized_start = 1607
+    _globals["_PREDICTRESPONSE"]._serialized_end = 1645
+    _globals["_DELETEREQUEST"]._serialized_start = 1647
+    _globals["_DELETEREQUEST"]._serialized_end = 1716
+    _globals["_MODELDELETERESPONSE"]._serialized_start = 1718
+    _globals["_MODELDELETERESPONSE"]._serialized_end = 1809
+    _globals["_HEALTHSERVICE"]._serialized_start = 1812
+    _globals["_HEALTHSERVICE"]._serialized_end = 1958
+    _globals["_USERSTORAGESERVICE"]._serialized_start = 1961
+    _globals["_USERSTORAGESERVICE"]._serialized_end = 2190
+    _globals["_DATASETREGISTRYSERVICE"]._serialized_start = 2193
+    _globals["_DATASETREGISTRYSERVICE"]._serialized_end = 2474
+    _globals["_MODELSERVICE"]._serialized_start = 2477
+    _globals["_MODELSERVICE"]._serialized_end = 2762
 # @@protoc_insertion_point(module_scope)

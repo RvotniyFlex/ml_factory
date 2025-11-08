@@ -2,9 +2,7 @@ syntax = "proto3";
 
 package mlfactory;
 
-// =====================
-//      Health Check
-// =====================
+// Health Check
 service HealthService {
   rpc CheckApp (HealthRequest) returns (HealthResponse);
   rpc CheckS3 (S3HealthRequest) returns (HealthResponse);
@@ -22,9 +20,7 @@ message HealthResponse {
   string bucket = 3;
 }
 
-// =====================
-//     User Storage
-// =====================
+// User Storage
 service UserStorageService {
   rpc ListDatasets (UserRequest) returns (DatasetsResponse);
   rpc ListModels (UserModelRequest) returns (ModelsResponse);
@@ -72,9 +68,7 @@ message ScoresResponse {
   repeated FitResult scores = 3;
 }
 
-// =====================
-//    Dataset Registry
-// =====================
+// Dataset Registry
 service DatasetRegistryService {
   rpc GetUsage (UserRequest) returns (UsageResponse);
   rpc UploadFile (UploadRequest) returns (UploadResponse);
@@ -118,13 +112,31 @@ message LoadResponse {
   string sample_json = 5;
 }
 
-// =====================
-//      Model Service
-// =====================
+// Model Service
 service ModelService {
   rpc Train (TrainRequest) returns (TrainResponse);
   rpc Predict (PredictRequest) returns (PredictResponse);
   rpc Delete (DeleteRequest) returns (ModelDeleteResponse);
+  rpc ListAvailableModels (Empty) returns (AvailableModelsResponse);
+}
+
+message Empty {}
+
+message ModelHyperparameters {
+  double learning_rate = 1;
+  int32 max_depth = 2;
+  int32 n_estimators = 3;
+  double alpha = 4;
+  double l1_ratio = 5;
+}
+
+message ModelDescription {
+  string name = 1;
+  ModelHyperparameters hyperparameters = 2;
+}
+
+message AvailableModelsResponse {
+  repeated ModelDescription models = 1;
 }
 
 message TrainRequest {

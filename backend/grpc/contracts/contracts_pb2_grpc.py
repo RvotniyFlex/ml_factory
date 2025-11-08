@@ -29,10 +29,7 @@ if _version_not_supported:
 
 
 class HealthServiceStub(object):
-    """=====================
-    Health Check
-    =====================
-    """
+    """Health Check"""
 
     def __init__(self, channel):
         """Constructor.
@@ -55,10 +52,7 @@ class HealthServiceStub(object):
 
 
 class HealthServiceServicer(object):
-    """=====================
-    Health Check
-    =====================
-    """
+    """Health Check"""
 
     def CheckApp(self, request, context):
         """Missing associated documentation comment in .proto file."""
@@ -97,10 +91,7 @@ def add_HealthServiceServicer_to_server(servicer, server):
 
 # This class is part of an EXPERIMENTAL API.
 class HealthService(object):
-    """=====================
-    Health Check
-    =====================
-    """
+    """Health Check"""
 
     @staticmethod
     def CheckApp(
@@ -164,10 +155,7 @@ class HealthService(object):
 
 
 class UserStorageServiceStub(object):
-    """=====================
-    User Storage
-    =====================
-    """
+    """User Storage"""
 
     def __init__(self, channel):
         """Constructor.
@@ -196,10 +184,7 @@ class UserStorageServiceStub(object):
 
 
 class UserStorageServiceServicer(object):
-    """=====================
-    User Storage
-    =====================
-    """
+    """User Storage"""
 
     def ListDatasets(self, request, context):
         """Missing associated documentation comment in .proto file."""
@@ -249,10 +234,7 @@ def add_UserStorageServiceServicer_to_server(servicer, server):
 
 # This class is part of an EXPERIMENTAL API.
 class UserStorageService(object):
-    """=====================
-    User Storage
-    =====================
-    """
+    """User Storage"""
 
     @staticmethod
     def ListDatasets(
@@ -346,10 +328,7 @@ class UserStorageService(object):
 
 
 class DatasetRegistryServiceStub(object):
-    """=====================
-    Dataset Registry
-    =====================
-    """
+    """Dataset Registry"""
 
     def __init__(self, channel):
         """Constructor.
@@ -384,10 +363,7 @@ class DatasetRegistryServiceStub(object):
 
 
 class DatasetRegistryServiceServicer(object):
-    """=====================
-    Dataset Registry
-    =====================
-    """
+    """Dataset Registry"""
 
     def GetUsage(self, request, context):
         """Missing associated documentation comment in .proto file."""
@@ -448,10 +424,7 @@ def add_DatasetRegistryServiceServicer_to_server(servicer, server):
 
 # This class is part of an EXPERIMENTAL API.
 class DatasetRegistryService(object):
-    """=====================
-    Dataset Registry
-    =====================
-    """
+    """Dataset Registry"""
 
     @staticmethod
     def GetUsage(
@@ -575,10 +548,7 @@ class DatasetRegistryService(object):
 
 
 class ModelServiceStub(object):
-    """=====================
-    Model Service
-    =====================
-    """
+    """Model Service"""
 
     def __init__(self, channel):
         """Constructor.
@@ -604,13 +574,16 @@ class ModelServiceStub(object):
             response_deserializer=contracts__pb2.ModelDeleteResponse.FromString,
             _registered_method=True,
         )
+        self.ListAvailableModels = channel.unary_unary(
+            "/mlfactory.ModelService/ListAvailableModels",
+            request_serializer=contracts__pb2.Empty.SerializeToString,
+            response_deserializer=contracts__pb2.AvailableModelsResponse.FromString,
+            _registered_method=True,
+        )
 
 
 class ModelServiceServicer(object):
-    """=====================
-    Model Service
-    =====================
-    """
+    """Model Service"""
 
     def Train(self, request, context):
         """Missing associated documentation comment in .proto file."""
@@ -625,6 +598,12 @@ class ModelServiceServicer(object):
         raise NotImplementedError("Method not implemented!")
 
     def Delete(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
+
+    def ListAvailableModels(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details("Method not implemented!")
@@ -648,6 +627,11 @@ def add_ModelServiceServicer_to_server(servicer, server):
             request_deserializer=contracts__pb2.DeleteRequest.FromString,
             response_serializer=contracts__pb2.ModelDeleteResponse.SerializeToString,
         ),
+        "ListAvailableModels": grpc.unary_unary_rpc_method_handler(
+            servicer.ListAvailableModels,
+            request_deserializer=contracts__pb2.Empty.FromString,
+            response_serializer=contracts__pb2.AvailableModelsResponse.SerializeToString,
+        ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
         "mlfactory.ModelService", rpc_method_handlers
@@ -658,10 +642,7 @@ def add_ModelServiceServicer_to_server(servicer, server):
 
 # This class is part of an EXPERIMENTAL API.
 class ModelService(object):
-    """=====================
-    Model Service
-    =====================
-    """
+    """Model Service"""
 
     @staticmethod
     def Train(
@@ -742,6 +723,36 @@ class ModelService(object):
             "/mlfactory.ModelService/Delete",
             contracts__pb2.DeleteRequest.SerializeToString,
             contracts__pb2.ModelDeleteResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True,
+        )
+
+    @staticmethod
+    def ListAvailableModels(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            "/mlfactory.ModelService/ListAvailableModels",
+            contracts__pb2.Empty.SerializeToString,
+            contracts__pb2.AvailableModelsResponse.FromString,
             options,
             channel_credentials,
             insecure,

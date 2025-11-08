@@ -11,9 +11,13 @@ from backend.dataset_registry import load_dataframe
 from backend.preprocessing import preprocess_dataset
 from backend.training import save_trained_model, train_regressor_task
 from backend.utils.data_models import (
+    AvailableModels,
     DatasetPreprocessing,
     DeleteModelResponse,
+    ElasticNetParams,
     FittedModel,
+    GBRHParams,
+    ModelDescription,
     ModelPred,
     RunConfig,
 )
@@ -23,6 +27,28 @@ from backend.utils.settings import settings
 
 router = APIRouter(prefix="/ml_management", tags=["Models"])
 logger = get_logger("backend")
+
+
+@router.get("/all_models", status_code=status.HTTP_200_OK)
+async def list_all_models() -> AvailableModels:
+    """
+    Возвращает список всех доступных моделей для обучения.
+    """
+
+    elastic_model = ModelDescription(
+        name="ElasticNet",
+        hyperparameters=ElasticNetParams(alpha=1.0, l1_ratio=0.5),
+    )
+
+    gbr_model = ModelDescription(
+        name="GradientBoostingRegressor",
+        hyperparameters=GBRHParams(
+            n_estimators=100,
+            learning_rate=0.1,
+            max_depth=3,
+        ),
+    )
+    return AvailableModels(models=[elastic_model, gbr_model])
 
 
 @router.post("/train/{user_id}/{data_id}", status_code=status.HTTP_200_OK)
@@ -162,8 +188,15 @@ async def predict_endpoint(
                 df, preprocessing_config, transformers
             )
 
-            print(df_preprocessed)
             preds = model.predict(df_preprocessed)
+            target_col = preprocessing_config.target
+            target_transformer = transformers.get(target_col)
+
+            if target_transformer:
+                preds = target_transformer.inverse_transform(
+                    preds.reshape(-1, 1)
+                ).ravel()
+
             logger.info(f"Предсказание выполнено успешно. ({len(preds)} записей)")
             return ModelPred.model_validate({"predictions": preds.tolist()})
         except Exception as e:

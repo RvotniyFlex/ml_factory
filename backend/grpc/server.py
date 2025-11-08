@@ -15,8 +15,6 @@ from backend.dataset_registry import (
     load_dataframe,
     upload_file,
 )
-
-# ===== gRPC контракты =====
 from backend.grpc.contracts import contracts_pb2, contracts_pb2_grpc
 from backend.preprocessing import preprocess_dataset
 from backend.s3_connector import s3_client_factory
@@ -28,21 +26,13 @@ from backend.user_object import (
 )
 from backend.utils.data_models import DatasetPreprocessing, RunConfig
 from backend.utils.logger import get_logger
-
-# ===== Импорты внутренних модулей =====
 from backend.utils.settings import settings
 
-# ===== Настройки =====
 logger = get_logger("grpc_server")
 session = aioboto3.Session()
 s3_client_factory = s3_client_factory(session)
 
-# ============================================================
-#                        СЕРВИСЫ
-# ============================================================
 
-
-# ---------- Health ----------
 class HealthService(contracts_pb2_grpc.HealthServiceServicer):
     async def CheckApp(self, request, context):
         """Проверка, что приложение живо"""
@@ -66,9 +56,9 @@ class HealthService(contracts_pb2_grpc.HealthServiceServicer):
             )
 
 
-# ---------- User Storage ----------
 class UserStorageService(contracts_pb2_grpc.UserStorageServiceServicer):
     async def ListDatasets(self, request, context):
+        """Список доступных датасетов"""
         try:
             datasets = await get_user_datasets(request.user_id, s3_client_factory)
             response = contracts_pb2.DatasetsResponse(user_id=request.user_id)
@@ -82,6 +72,7 @@ class UserStorageService(contracts_pb2_grpc.UserStorageServiceServicer):
             return contracts_pb2.DatasetsResponse(user_id=request.user_id)
 
     async def ListModels(self, request, context):
+        """Список доступных моделей"""
         try:
             models = await get_user_models(
                 request.user_id, request.data_id, s3_client_factory
@@ -98,6 +89,7 @@ class UserStorageService(contracts_pb2_grpc.UserStorageServiceServicer):
             )
 
     async def ListScores(self, request, context):
+        """Список доступных метрик"""
         try:
             scores = await get_user_scores(
                 request.user_id, request.data_id, s3_client_factory
@@ -119,9 +111,9 @@ class UserStorageService(contracts_pb2_grpc.UserStorageServiceServicer):
             )
 
 
-# ---------- Dataset Registry ----------
 class DatasetRegistryService(contracts_pb2_grpc.DatasetRegistryServiceServicer):
     async def GetUsage(self, request, context):
+        """Получение текущего использования хранилища"""
         try:
             usage = await get_storage_usage_mb(request.user_id, s3_client_factory)
             return contracts_pb2.UsageResponse(
@@ -133,11 +125,11 @@ class DatasetRegistryService(contracts_pb2_grpc.DatasetRegistryServiceServicer):
             return contracts_pb2.UsageResponse(user_id=request.user_id)
 
     async def UploadFile(self, request, context):
+        """Загрузка файла в S3"""
         try:
             filename = request.filename.lower()
             file_bytes = request.file_bytes
 
-            # читаем файл в DataFrame
             if filename.endswith(".csv"):
                 df = pd.read_csv(io.BytesIO(file_bytes))
             elif filename.endswith(".parquet"):
@@ -151,7 +143,6 @@ class DatasetRegistryService(contracts_pb2_grpc.DatasetRegistryServiceServicer):
                     user_id=request.user_id, filename=request.filename
                 )
 
-            # сохраняем parquet
             buffer = io.BytesIO()
             df.to_parquet(buffer, index=False, engine="pyarrow")
             buffer.seek(0)
@@ -181,6 +172,7 @@ class DatasetRegistryService(contracts_pb2_grpc.DatasetRegistryServiceServicer):
             return contracts_pb2.UploadResponse(user_id=request.user_id)
 
     async def DeleteFile(self, request, context):
+        """Удаление файла из S3"""
         try:
             deleted = await delete_file(
                 request.user_id, request.data_id, s3_client_factory
@@ -196,6 +188,7 @@ class DatasetRegistryService(contracts_pb2_grpc.DatasetRegistryServiceServicer):
             return contracts_pb2.DeleteResponse(user_id=request.user_id)
 
     async def LoadSample(self, request, context):
+        """Загрузка примера датасета"""
         try:
             df = await load_dataframe(
                 request.user_id, request.data_id, s3_client_factory
@@ -222,9 +215,34 @@ class DatasetRegistryService(contracts_pb2_grpc.DatasetRegistryServiceServicer):
             return contracts_pb2.LoadResponse(user_id=request.user_id)
 
 
-# ---------- Model Service ----------
 class ModelService(contracts_pb2_grpc.ModelServiceServicer):
+    async def ListAvailableModels(self, request, context):
+        """
+        Возвращает список всех доступных моделей и их гиперпараметры.
+        """
+        elastic_params = contracts_pb2.ModelHyperparameters(
+            alpha=1.0,
+            l1_ratio=0.5,
+        )
+        elastic_model = contracts_pb2.ModelDescription(
+            name="ElasticNet",
+            hyperparameters=elastic_params,
+        )
+
+        gbr_params = contracts_pb2.ModelHyperparameters(
+            n_estimators=100,
+            learning_rate=0.1,
+            max_depth=3,
+        )
+        gbr_model = contracts_pb2.ModelDescription(
+            name="GradientBoostingRegressor",
+            hyperparameters=gbr_params,
+        )
+
+        return contracts_pb2.AvailableModelsResponse(models=[elastic_model, gbr_model])
+
     async def Train(self, request, context):
+        """Обучение модели"""
         try:
             run_config = RunConfig(**json.loads(request.run_config_json))
             df = await load_dataframe(
@@ -235,13 +253,14 @@ class ModelService(contracts_pb2_grpc.ModelServiceServicer):
                 context.set_details("Датасет не найден")
                 return contracts_pb2.TrainResponse()
 
-            model, preprocessing_config, fit_result = train_regressor_task(
-                df, run_config
+            model, preprocessing_config, fit_result, transformers = (
+                train_regressor_task(df, run_config)
             )
             model_name = fit_result.name
             s3_key = await save_trained_model(
                 model=model,
                 preprocessing_config=preprocessing_config,
+                transformers=transformers,
                 scores=fit_result,
                 user_id=request.user_id,
                 data_id=request.data_id,
@@ -263,8 +282,10 @@ class ModelService(contracts_pb2_grpc.ModelServiceServicer):
             return contracts_pb2.TrainResponse()
 
     async def Predict(self, request, context):
+        """Предсказание обученной модели"""
         model_key = f"users/{request.user_id}/models/{request.data_id}/{request.model_name}/model.joblib"
         preproc_key = f"users/{request.user_id}/models/{request.data_id}/{request.model_name}/preprocessing.json"
+        transformers_key = f"users/{request.user_id}/models/{request.data_id}/{request.model_name}/transformers.joblib"
 
         try:
             async with await s3_client_factory() as s3:
@@ -274,6 +295,13 @@ class ModelService(contracts_pb2_grpc.ModelServiceServicer):
                 preproc_json = await preproc_obj["Body"].read()
                 preprocessing_config = DatasetPreprocessing(**json.loads(preproc_json))
 
+                transformers_obj = await s3.get_object(
+                    Bucket=settings.s3_bucket,
+                    Key=transformers_key,
+                )
+                transformers_data = await transformers_obj["Body"].read()
+                transformers = joblib.load(io.BytesIO(transformers_data))
+
                 model_obj = await s3.get_object(
                     Bucket=settings.s3_bucket, Key=model_key
                 )
@@ -281,10 +309,20 @@ class ModelService(contracts_pb2_grpc.ModelServiceServicer):
                 model = joblib.load(io.BytesIO(model_data))
 
             df = pd.DataFrame(json.loads(request.input_data_json))
-            df_preprocessed = preprocess_dataset(df, preprocessing_config)
 
-            print(df_preprocessed)
+            if preprocessing_config.target in df.columns:
+                df = df.drop(columns=[preprocessing_config.target], axis=1)
+            df_preprocessed, _ = preprocess_dataset(
+                df, preprocessing_config, transformers
+            )
             preds = model.predict(df_preprocessed)
+            target_col = preprocessing_config.target
+            target_transformer = transformers.get(target_col)
+
+            if target_transformer:
+                preds = target_transformer.inverse_transform(
+                    preds.reshape(-1, 1)
+                ).ravel()
 
             return contracts_pb2.PredictResponse(predictions=[float(p) for p in preds])
         except Exception as e:
@@ -294,6 +332,7 @@ class ModelService(contracts_pb2_grpc.ModelServiceServicer):
             return contracts_pb2.PredictResponse()
 
     async def Delete(self, request, context):
+        """Удаление модели"""
         prefix = (
             f"users/{request.user_id}/models/{request.data_id}/{request.model_name}/"
         )
@@ -327,10 +366,8 @@ class ModelService(contracts_pb2_grpc.ModelServiceServicer):
             return contracts_pb2.ModelDeleteResponse()
 
 
-# ============================================================
-#                        SERVER RUNNER
-# ============================================================
 async def serve():
+    """Запуск сервера"""
     server = grpc.aio.server()
     contracts_pb2_grpc.add_HealthServiceServicer_to_server(HealthService(), server)
     contracts_pb2_grpc.add_UserStorageServiceServicer_to_server(

@@ -73,7 +73,7 @@ def apply_transformations(
             transformer = LabelEncoder()
             df[col_name] = transformer.fit_transform(df[col_name].astype(str))
         else:
-            df[col_name] = transformer.transform(df[[col_name]])
+            df[col_name] = transformer.transform(df[col_name])
 
     elif col_cfg.transformations == "OneHotEncoder":
         if not transformer:
@@ -121,7 +121,7 @@ def preprocess_dataset(
         if col_cfg.drop:
             if col_name in df.columns:
                 df: pd.DataFrame = df.drop(columns=[col_name])
-                continue
+            continue
 
         if (col_name not in df.columns) and (col_name == preprocessing_cfg.target):
             continue

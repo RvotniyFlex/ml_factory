@@ -1,131 +1,135 @@
 import datetime
+import sys
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
 import streamlit as st
 from client import BackendAPI
 
-# ==============================
-# Настройки Streamlit
-# ==============================
+sys.path.append(str(Path(__file__).resolve().parents[1]))
+from backend.utils.logger import get_logger, setup_logging
+
 st.set_page_config(page_title="AutoML Dashboard", layout="wide")
 
 api = BackendAPI()
-USER_ID = 3
+USER_ID: int = 3
 
 st.sidebar.title("📂 Навигация")
-page = st.sidebar.radio(
+page: str = st.sidebar.radio(
     "Выберите страницу:",
     [
         "1️⃣ Загрузка датасета",
-        "2️⃣ Настройка предпроцессинга",
-        "3️⃣ Настройка и обучение модели",
-        "4️⃣ Дашборд моделей",
-        "5️⃣ Инференс модели",
-        "6️⃣ Технические операции",
+        "2️⃣ Настройка предпроцессинга и модели",
+        "3️⃣ Дашборд моделей",
+        "4️⃣ Инференс модели",
+        "5️⃣ Технические операции",
     ],
 )
 
-# ==============================
-# Session state
-# ==============================
+if "logger_initialized" not in st.session_state:
+    setup_logging()
+    st.session_state.logger_initialized = True
+logger = get_logger("frontend")
+
+# Инициализируем session state
+
 if "data_id" not in st.session_state:
-    st.session_state.data_id = None
+    st.session_state.data_id: Optional[str] = None
 if "preprocessing" not in st.session_state:
-    st.session_state.preprocessing = None
+    st.session_state.preprocessing: Optional[List[Dict[str, Any]]] = None
 if "model_config" not in st.session_state:
-    st.session_state.model_config = None
+    st.session_state.model_config: Optional[Dict[str, Any]] = None
 if "run_config" not in st.session_state:
-    st.session_state.run_config = None
+    st.session_state.run_config: Optional[Dict[str, Any]] = None
 
+# Часть 1. Загружаем датасет пользователья
 
-# ====================================================
-# 1️⃣ ЗАГРУЗКА
-# ====================================================
 if page.startswith("1️⃣"):
     st.title("📥 Загрузка датасета")
 
     uploaded_file = st.file_uploader("Загрузите CSV файл", type=["csv"])
     if uploaded_file:
-        tmp_path = Path("temp") / uploaded_file.name
+        tmp_path: Path = Path("temp") / uploaded_file.name
         tmp_path.parent.mkdir(exist_ok=True)
         with open(tmp_path, "wb") as f:
             f.write(uploaded_file.getbuffer())
-
-        st.info("⏳ Загружаем датасет в базу...")
-        api.upload_dataset(USER_ID, str(tmp_path))
-        st.success("✅ Датасет успешно загружен в S3 через backend")
+        with st.spinner("Загружаем датасет в базу..."):
+            api.upload_dataset(USER_ID, str(tmp_path))
+        st.success("Датасет успешно загружен!")
 
         st.session_state.data_id = uploaded_file.name
         st.info("Теперь перейдите на вкладку 2️⃣ для настройки модели и препроцессинга.")
 
-# ====================================================
-# 2️⃣ НАСТРОЙКА МОДЕЛИ + ПРЕПРОЦЕССИНГ
-# ====================================================
+
+# Часть 2. Настраиваем предпроцессинг модели и запускаем обучение
+
 elif page.startswith("2️⃣"):
     st.title("⚙️ Настройка модели и препроцессинга")
 
-    # st.info("📡 Загружаем список доступных датасетов...")
-    datasets_resp = api.list_datasets(USER_ID)
+    datasets_resp: Dict[str, Any] = api.list_datasets(USER_ID)
 
     if "datasets" not in datasets_resp or not datasets_resp["datasets"]:
         st.warning(
-            "❌ У вас пока нет загруженных датасетов. Сначала загрузите хотя бы один на странице 1️⃣."
+            "У вас пока нет загруженных датасетов. Сначала загрузите хотя бы один на странице 1️⃣."
+        )
+        logger.error(
+            "У вас пока нет загруженных датасетов. Сначала загрузите хотя бы один на странице 1️⃣."
         )
         st.stop()
 
-    dataset_options = {d["name"]: d["data_id"] for d in datasets_resp["datasets"]}
-
-    selected_name = st.selectbox("📂 Выберите датасет:", list(dataset_options.keys()))
-    selected_data_id = dataset_options[selected_name]
+    dataset_options: Dict[str, str] = {
+        d["name"]: d["data_id"] for d in datasets_resp["datasets"]
+    }
+    selected_name: str = st.selectbox("Выберите датасет:", list(dataset_options.keys()))
+    selected_data_id: str = dataset_options[selected_name]
 
     st.session_state.data_id = selected_data_id
-    # st.markdown(f"**Выбранный датасет:** `{selected_name}` (ID: {selected_data_id})")
-
-    dataset_info = api.load_dataset_info(USER_ID, selected_data_id)
+    dataset_info: Optional[Dict[str, Any]] = api.load_dataset_info(
+        USER_ID, selected_data_id
+    )
 
     if not dataset_info or "columns" not in dataset_info:
-        st.error("❌ Не удалось получить информацию о датасете.")
-        # st.json(dataset_info)
+        st.error("Не удалось получить информацию о датасете.")
+        logger.error("Не удалось получить информацию о датасете.")
         st.stop()
 
     if dataset_info:
-        columns = dataset_info.get("columns", [])
+        columns: List[str] = dataset_info.get("columns", [])
         col_type = dataset_info.get("col_type", []).values()
         num_nan = dataset_info.get("na_columns", []).values()
         st.session_state.dataset_info = dataset_info
 
-        target = st.selectbox("🎯 Выберите целевую переменную:", columns)
+        target: str = st.selectbox("Выберите целевую переменную:", columns)
 
-        edited_rows = []
-        edited_rows.append({"target": target})
+        edited_rows: List[Dict[str, Any]] = [{"target": target}]
 
         if target:
-            # st.info("📡 Загружаем информацию о колонках...")
-            feature_info = []
+            feature_info: List[Dict[str, Any]] = []
             for col, ctype, missing in zip(columns, col_type, num_nan):
-                if ctype == "numerical":
-                    fillna_policy = "mean" if missing > 0 else "–"
-                else:
-                    fillna_policy = "mode" if missing > 0 else "–"
-                transformations = (
+                fillna_policy: str = (
+                    "mean"
+                    if (ctype == "numerical" and missing > 0)
+                    else ("mode" if ctype != "numerical" and missing > 0 else "–")
+                )
+                transformations: str = (
                     "StandardScaler" if ctype == "numerical" else "OneHotEncoder"
                 )
                 feature_info.append(
                     {
                         "name": col,
                         "col_type": ctype,
-                        "missing_count": round(missing, 2),
+                        "missing_count": missing,
                         "fillna_policy": fillna_policy,
                         "transformations": transformations,
                     }
                 )
 
-            st.markdown("### 🧩 Настройка препроцессинга признаков")
+            st.markdown("### Настройка препроцессинга признаков")
 
-            num_options = ["StandardScaler", "MinMaxScaler", "None"]
-            cat_options = ["LabelEncoder", "OneHotEncoder"]
+            num_options: List[str] = ["StandardScaler", "MinMaxScaler", "None"]
+            cat_options: List[str] = ["LabelEncoder", "OneHotEncoder"]
 
             header_cols = st.columns([3, 2, 2, 2, 3, 2])
             with header_cols[0]:
@@ -173,6 +177,7 @@ elif page.startswith("2️⃣"):
                     )
 
                 with c5:
+                    transformations: str
                     if row["col_type"] == "numerical":
                         transformations = st.selectbox(
                             "Transformation",
@@ -188,7 +193,9 @@ elif page.startswith("2️⃣"):
                             key=f"trans_{i}",
                         )
                 with c6:
-                    use_col = st.checkbox("Drop column?", value=False, key=f"use_{i}")
+                    use_col: bool = st.checkbox(
+                        "Drop column?", value=False, key=f"use_{i}"
+                    )
 
                 edited_rows.append(
                     {
@@ -200,137 +207,141 @@ elif page.startswith("2️⃣"):
                         "drop": use_col,
                     }
                 )
-            st.write(edited_rows)
-            if st.button("💾 Сохранить препроцессинг"):
-                st.session_state.preprocessing = edited_rows
-                st.success("✅ Конфигурация препроцессинга сохранена!")
-                st.info(
-                    "Теперь перейдите на вкладку 3️⃣ для настройки и обучения модели."
-                )
+
+        if st.button("💾 Сохранить препроцессинг"):
+            st.session_state.preprocessing = edited_rows
+            st.session_state.preprocessing_saved = True
+            st.success("Конфигурация препроцессинга сохранена!")
+
+        if st.session_state.get("preprocessing_saved"):
+            st.markdown("### ⚙️ Настройка модели")
+
+            models_resp = api.list_all_models()
+            available_models = models_resp.get("models", [])
+
+            if not available_models:
+                st.error("Не удалось получить список доступных моделей с сервера.")
+                logger.error("Не удалось получить список доступных моделей с сервера.")
+                st.stop()
+
+            model_names = [m["name"] for m in available_models]
+            model_class: str = st.selectbox(
+                "Класс модели:", model_names, key="model_class_select"
+            )
+
+            selected_model = next(
+                (m for m in available_models if m["name"] == model_class), None
+            )
+
+            if not selected_model or "hyperparameters" not in selected_model:
+                st.error("У выбранной модели нет описания гиперпараметров.")
+                logger.error("У выбранной модели нет описания гиперпараметров.")
+                st.stop()
+
+            st.markdown(f"**Настройка гиперпараметров для {model_class}**")
+            hyperparams: Dict[str, Any] = {}
+
+            for param_name, default_value in selected_model["hyperparameters"].items():
+                if isinstance(default_value, float):
+                    hyperparams[param_name] = st.number_input(
+                        param_name,
+                        value=float(default_value),
+                        step=0.01,
+                        key=f"{model_class}_{param_name}",
+                    )
+                elif isinstance(default_value, int):
+                    hyperparams[param_name] = st.number_input(
+                        param_name,
+                        value=int(default_value),
+                        step=1,
+                        key=f"{model_class}_{param_name}",
+                    )
+                else:
+                    hyperparams[param_name] = st.text_input(
+                        param_name,
+                        value=str(default_value),
+                        key=f"{model_class}_{param_name}",
+                    )
+
+            if st.button("💾 Сохранить конфигурацию и запустить обучение"):
+                st.session_state.model_config = {
+                    "hyperparameters": hyperparams,
+                    "model_class": model_class,
+                }
+                st.session_state.model_saved = True
+                st.success("Модель сохранена!")
+
+                preprocessing: List[Dict[str, Any]] = st.session_state.preprocessing
+                model_config: Dict[str, Any] = st.session_state.model_config
+                data_id: str = st.session_state.data_id
+
+                run_config: Dict[str, Any] = {
+                    "preprocessing_config": {
+                        "dataset_preprocessing": [
+                            {
+                                "name": row["name"],
+                                "data_type": row["col_type"],
+                                "fillna_policy": None
+                                if row["fillna_policy"] in ["–", "-", "None"]
+                                else row["fillna_policy"],
+                                "transformations": None
+                                if row["transformations"] in ["None", "-", "–"]
+                                else row["transformations"],
+                                "drop": row["drop"],
+                            }
+                            for row in preprocessing
+                            if "name" in row
+                        ],
+                        "target": target,
+                    },
+                    "ml_config": model_config,
+                }
+
+                st.session_state.run_config = run_config
+                with st.spinner("Обучаем модель..."):
+                    response: Dict[str, Any] = api.train_model(
+                        USER_ID, data_id, run_config
+                    )
+                if isinstance(response, dict) and "metrics" in response:
+                    st.success("Модель обучена успешно!")
+                    df_metrics: pd.DataFrame = pd.DataFrame(response["metrics"])
+                    st.dataframe(df_metrics, use_container_width=True, hide_index=True)
+                else:
+                    st.error("Ошибка при обучении модели.")
+                    logger.error("Ошибка при обучении модели.")
+
+# Часть 3. Дашборд
 
 elif page.startswith("3️⃣"):
-    st.markdown("### ⚙️ Настройка модели")
-    model_class = st.selectbox(
-        "🧠 Класс модели:", ["GradientBoostingRegressor", "ElasticNet"]
-    )
-
-    hyperparams = {}
-    if model_class == "GradientBoostingRegressor":
-        hyperparams["learning_rate"] = st.number_input(
-            "learning_rate", value=0.1, min_value=0.001, max_value=1.0
-        )
-        hyperparams["max_depth"] = st.number_input(
-            "max_depth", value=3, min_value=1, max_value=10
-        )
-        hyperparams["n_estimators"] = st.number_input(
-            "n_estimators", value=100, min_value=10, step=10
-        )
-    else:
-        hyperparams["alpha"] = st.number_input(
-            "alpha", value=1.0, min_value=0.0, step=0.1
-        )
-        hyperparams["l1_ratio"] = st.number_input(
-            "l1_ratio", value=0.5, min_value=0.0, max_value=1.0, step=0.05
-        )
-
-    if st.button("💾 Сохранить конфигурацию"):
-        st.session_state.model_config = {
-            "hyperparameters": hyperparams,
-            "model_class": model_class,
-        }
-        st.success("✅ Конфигурация модели и препроцессинга сохранена!")
-
-    preprocessing = st.session_state.preprocessing
-    model_config = st.session_state.model_config
-    data_id = st.session_state.data_id
-
-    target_candidates = [r for r in preprocessing if "target" in r]
-    if target_candidates:
-        target = target_candidates[0]["target"]
-    else:
-        columns = [r["name"] for r in preprocessing if "name" in r]
-        target = st.selectbox("🎯 Выберите целевую колонку:", options=columns)
-
-    run_config = {
-        "preprocessing_config": {
-            "dataset_preprocessing": [
-                {
-                    "name": row["name"],
-                    "data_type": row["col_type"],
-                    "fillna_policy": None
-                    if row["fillna_policy"] in ["–", "-", "None"]
-                    else row["fillna_policy"],
-                    "transformations": None
-                    if row["transformations"] in ["None", "-", "–"]
-                    else row["transformations"],
-                    "drop": row["drop"],
-                }
-                for row in preprocessing
-                if "name" in row
-            ],
-            "target": target,
-        },
-        "ml_config": model_config,
-    }
-
-    st.session_state.run_config = run_config
-
-    if st.button("🚀 Запустить обучение"):
-        response = api.train_model(USER_ID, data_id, run_config)
-
-        if isinstance(response, dict) and "metrics" in response:
-            st.success("✅ Модель обучена успешно!")
-            model_name = response.get(
-                "model_name", run_config["ml_config"]["model_class"]
-            )
-            df_metrics = pd.DataFrame(response["metrics"])
-            df_metrics.insert(0, "model_name", model_name)
-            df_metrics.insert(0, "data_id", data_id)
-
-            st.markdown("### 📊 Метрики модели")
-            st.dataframe(df_metrics, use_container_width=True, hide_index=True)
-            st.info(
-                "Теперь перейдите на вкладку 4️⃣ для, чтобы посмотреть дашборд качества."
-            )
-
-        else:
-            st.error("❌ Ошибка при обучении модели.")
-            # st.json(response)
-
-
-# ====================================================
-# 4️⃣ ДАШБОРД МОДЕЛЕЙ
-# ====================================================
-elif page.startswith("4️⃣"):
     st.title("📊 Дашборд обученных моделей")
 
-    st.info("📡 Загружаем список доступных датасетов...")
-    datasets_resp = api.list_datasets(USER_ID)
+    datasets_resp: Dict[str, Any] = api.list_datasets(USER_ID)
 
     if (
         not datasets_resp
         or "datasets" not in datasets_resp
         or not datasets_resp["datasets"]
     ):
-        st.warning("❌ У вас пока нет загруженных датасетов.")
+        st.warning("У вас пока нет загруженных датасетов.")
+        logger.error("У вас пока нет загруженных датасетов.")
         st.stop()
 
-    dataset_options = {d["name"]: d["data_id"] for d in datasets_resp["datasets"]}
-
-    selected_name = st.selectbox("📂 Выберите датасет:", list(dataset_options.keys()))
-    selected_data_id = dataset_options[selected_name]
+    dataset_options: Dict[str, str] = {
+        d["name"]: d["data_id"] for d in datasets_resp["datasets"]
+    }
+    selected_name: str = st.selectbox("Выберите датасет:", list(dataset_options.keys()))
+    selected_data_id: str = dataset_options[selected_name]
     st.session_state.data_id = selected_data_id
 
-    st.info("📈 Получаем метрики моделей...")
-    scores_resp = api.list_scores(USER_ID, selected_data_id)
+    scores_resp: Dict[str, Any] = api.list_scores(USER_ID, selected_data_id)
 
     if not scores_resp or "scores" not in scores_resp:
-        st.warning("⚠️ Для этого датасета ещё нет обученных моделей.")
+        st.warning("Для этого датасета ещё нет обученных моделей.")
         st.stop()
 
-    records = []
+    records: List[Dict[str, Any]] = []
     for model_entry in scores_resp["scores"]:
-        model_name = model_entry.get("name", "unknown_model")
+        model_name: str = model_entry.get("name", "unknown_model")
         for metric in model_entry.get("scores", []):
             records.append(
                 {
@@ -342,74 +353,56 @@ elif page.startswith("4️⃣"):
             )
 
     if not records:
-        st.warning("⚠️ Нет данных о метриках.")
+        st.warning("Нет данных о метриках.")
         st.stop()
 
-    df = pd.DataFrame(records)
+    df: pd.DataFrame = pd.DataFrame(records)
 
-    available_metrics = sorted(df["metric"].unique().tolist())
-    selected_metric = st.selectbox(
-        "📊 Выберите метрику для сортировки:", available_metrics
+    available_metrics: List[str] = sorted(df["metric"].unique().tolist())
+    selected_metric: str = st.selectbox(
+        "Выберите метрику для сортировки:", available_metrics
     )
-    df_filtered = df[df["metric"] == selected_metric].sort_values(
+    df_filtered: pd.DataFrame = df[df["metric"] == selected_metric].sort_values(
         by="value", ascending=False
     )
 
     st.markdown(
-        f"### 📋 Результаты моделей по датасету `{selected_name}` (метрика `{selected_metric}`)"
+        f"### Результаты моделей по датасету `{selected_name}` (метрика `{selected_metric}`)"
     )
     st.dataframe(df_filtered, use_container_width=True, hide_index=True)
 
+# Часть 4. Предсказания на новых данных
 
-# ====================================================
-# 5️⃣ ИНФЕРЕНС МОДЕЛИ
-# ====================================================
-elif page.startswith("5️⃣"):
+elif page.startswith("4️⃣"):
     st.title("🔮 Инференс модели")
 
-    if not st.session_state.get("data_id"):
-        st.info("📡 Загружаем список доступных датасетов...")
-        datasets_resp = api.list_datasets(USER_ID)
+    datasets_resp: Dict[str, Any] = api.list_datasets(USER_ID)
 
-        if (
-            not datasets_resp
-            or "datasets" not in datasets_resp
-            or not datasets_resp["datasets"]
-        ):
-            st.warning("❌ У вас пока нет загруженных датасетов.")
-            st.stop()
-
-        dataset_options = {d["name"]: d["data_id"] for d in datasets_resp["datasets"]}
-
-        selected_name = st.selectbox(
-            "📂 Выберите датасет:", list(dataset_options.keys())
+    if "datasets" not in datasets_resp or not datasets_resp["datasets"]:
+        st.warning(
+            "У вас пока нет загруженных датасетов. Сначала загрузите хотя бы один на странице 1️⃣."
         )
-        selected_data_id = dataset_options[selected_name]
-
-        if st.button("✅ Подтвердить выбор датасета"):
-            st.session_state.data_id = selected_data_id
-            st.success(f"Выбран датасет: {selected_name}")
-            st.rerun()
-        else:
-            st.stop()
-
-    selected_data_id = st.session_state.data_id
-    st.info(f"📦 Используется датасет ID: `{selected_data_id}`")
-
-    st.info("📡 Загружаем список моделей для выбранного датасета...")
-    models_resp = api.list_models(USER_ID, selected_data_id)
-
-    if not models_resp or "models" not in models_resp or not models_resp["models"]:
-        st.warning("❌ Для выбранного датасета нет обученных моделей.")
         st.stop()
 
-    model_options = models_resp["models"]
+    dataset_options: Dict[str, str] = {
+        d["name"]: d["data_id"] for d in datasets_resp["datasets"]
+    }
+    selected_name: str = st.selectbox("Выберите датасет:", list(dataset_options.keys()))
+    selected_data_id: str = dataset_options[selected_name]
 
-    model_name = st.selectbox("🧠 Выберите модель для инференса:", model_options)
+    st.session_state.data_id = selected_data_id
 
-    st.info("📄 Загружаем конфигурацию препроцессинга...")
+    models_resp: Dict[str, Any] = api.list_models(USER_ID, selected_data_id)
+
+    if not models_resp or "models" not in models_resp or not models_resp["models"]:
+        st.warning("Для выбранного датасета нет обученных моделей.")
+        st.stop()
+
+    model_options: List[str] = models_resp["models"]
+    model_name: str = st.selectbox("Выберите модель для инференса:", model_options)
+
     preprocessing_info = api.load_dataset_info(USER_ID, selected_data_id)
-    st.write(preprocessing_info)
+
     target = None
     if isinstance(preprocessing_info, dict):
         target = (
@@ -418,90 +411,89 @@ elif page.startswith("5️⃣"):
             or preprocessing_info.get("preprocessing_config", {}).get("target")
         )
 
-    uploaded_file = st.file_uploader("📂 Загрузите CSV с новыми данными", type=["csv"])
+    uploaded_file = st.file_uploader("Загрузите CSV с новыми данными", type=["csv"])
 
     if uploaded_file and model_name:
-        df_new = pd.read_csv(uploaded_file)
-        st.markdown("### 👀 Предпросмотр данных для инференса")
+        df_new: pd.DataFrame = pd.read_csv(uploaded_file)
+        st.markdown("### Предпросмотр данных для инференса")
         st.dataframe(df_new.head(), use_container_width=True)
 
-        st.info("⚙️ Отправляем данные на backend для предсказаний...")
+        st.info("Отправляем данные для предсказаний...")
         df_new: pd.DataFrame = df_new.replace(
             {np.nan: None, np.inf: None, -np.inf: None}
         )
-        data = df_new.to_dict(orient="records")
+        data: List[Dict[str, Any]] = df_new.to_dict(orient="records")
+        response: Dict[str, Any] = api.predict(
+            USER_ID, selected_data_id, model_name, data
+        )
 
-        response = api.predict(USER_ID, selected_data_id, model_name, data)
-        st.write(response)
-
-        st.success("✅ Предсказания получены!")
+        st.success("Предсказания получены!")
         if isinstance(response, dict) and "predictions" in response:
-            preds = response["predictions"]
+            preds: List[float] = response["predictions"]
 
             if len(preds) == len(df_new):
-                df_result = df_new.copy()
+                df_result: pd.DataFrame = df_new.copy()
                 df_result["prediction"] = preds
             else:
                 df_result = pd.DataFrame({"prediction": preds})
 
-            st.markdown("### 📈 Результаты предсказания")
+            st.markdown("### Результаты предсказания")
             st.dataframe(df_result, use_container_width=True)
 
-            csv_bytes = df_result.to_csv(index=False).encode("utf-8")
+            csv_bytes: bytes = df_result.to_csv(index=False).encode("utf-8")
             st.download_button(
-                label="📥 Скачать результаты в CSV",
+                label="Скачать результаты в CSV",
                 data=csv_bytes,
                 file_name=f"predictions_{model_name}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
                 mime="text/csv",
             )
         else:
-            st.warning("❌ Ванга сегодня не работает.")
-# ====================================================
-# 6️⃣ ТЕХНИЧЕСКИЕ ОПЕРАЦИИ
-# ====================================================
-elif page.startswith("6️⃣"):
+            st.warning("Ванга сегодня не работает.")
+            logger.error("Предсказания не получены.")
+
+# Часть 5. Технические операции
+
+elif page.startswith("5️⃣"):
     st.title("🛠 Технические операции")
 
-    st.subheader("📦 Информация о хранилище")
-    st.info("📡 Получаем данные о размере хранилища...")
+    st.subheader("Информация о хранилище")
+    st.info("Получаем данные о размере хранилища...")
 
-    usage = api.storage_size(USER_ID)
+    usage: Dict[str, Any] = api.storage_size(USER_ID)
     if isinstance(usage, dict) and "usage_mb" in usage:
         st.metric("Используемое место", f"{usage['usage_mb']} MB")
     else:
-        st.warning("⚠️ Не удалось получить информацию о хранилище.")
-        # st.json(usage)
+        st.warning("Не удалось получить информацию о хранилище.")
 
     st.divider()
 
-    st.subheader("🗑 Удаление датасета")
+    st.subheader("Удаление датасета")
 
-    datasets_resp = api.list_datasets(USER_ID)
+    datasets_resp: Dict[str, Any] = api.list_datasets(USER_ID)
     if (
         not datasets_resp
         or "datasets" not in datasets_resp
         or not datasets_resp["datasets"]
     ):
-        st.warning("❌ У вас нет загруженных датасетов.")
+        st.warning("У вас нет загруженных датасетов.")
     else:
-        dataset_options = {
+        dataset_options: Dict[str, str] = {
             f"{d['name']} ({d['data_id']})": d["data_id"]
             for d in datasets_resp["datasets"]
         }
-        dataset_choice = st.selectbox(
-            "📂 Выберите датасет для удаления:", list(dataset_options.keys())
+        dataset_choice: str = st.selectbox(
+            "Выберите датасет для удаления:", list(dataset_options.keys())
         )
-        if st.button("🚨 Удалить выбранный датасет"):
-            data_id = dataset_options[dataset_choice]
+        if st.button("Удалить выбранный датасет"):
+            data_id: str = dataset_options[dataset_choice]
             with st.spinner("Удаляем датасет..."):
                 resp = api.delete_dataset(USER_ID, data_id)
-            st.success("✅ Датасет успешно удалён!")
-            # st.json(resp)
+            st.success("Датасет успешно удалён!")
             st.rerun()
 
     st.divider()
 
-    st.subheader("🧠 Удаление модели")
+    st.subheader("Удаление модели")
 
     datasets_resp = api.list_datasets(USER_ID)
     if (
@@ -509,29 +501,28 @@ elif page.startswith("6️⃣"):
         or "datasets" not in datasets_resp
         or not datasets_resp["datasets"]
     ):
-        st.warning("❌ Сначала загрузите хотя бы один датасет.")
+        st.warning("Сначала загрузите хотя бы один датасет.")
         st.stop()
 
     dataset_options = {
         f"{d['name']} ({d['data_id']})": d["data_id"] for d in datasets_resp["datasets"]
     }
-    selected_dataset_for_model = st.selectbox(
-        "📂 Выберите датасет:", list(dataset_options.keys()), key="model_dataset_select"
+    selected_dataset_for_model: str = st.selectbox(
+        "Выберите датасет:", list(dataset_options.keys()), key="model_dataset_select"
     )
-    selected_data_id = dataset_options[selected_dataset_for_model]
+    selected_data_id: str = dataset_options[selected_dataset_for_model]
 
-    st.info("📡 Загружаем список моделей...")
-    models_resp = api.list_models(USER_ID, selected_data_id)
+    st.info("Загружаем список моделей...")
+    models_resp: Dict[str, Any] = api.list_models(USER_ID, selected_data_id)
 
     if not models_resp or "models" not in models_resp or not models_resp["models"]:
-        st.warning("❌ Для выбранного датасета нет обученных моделей.")
+        st.warning("Для выбранного датасета нет обученных моделей.")
     else:
         model_name = st.selectbox(
-            "🧠 Выберите модель для удаления:", models_resp["models"]
+            "Выберите модель для удаления:", models_resp["models"]
         )
-        if st.button("🔥 Удалить модель"):
+        if st.button("Удалить модель"):
             with st.spinner("Удаляем модель..."):
                 resp = api.delete_model(USER_ID, selected_data_id, model_name)
-            st.success("✅ Модель успешно удалена!")
-            # st.json(resp)
+            st.success("Модель успешно удалена!")
             st.rerun()
