@@ -1,14 +1,14 @@
 import os
 
+from authlib.integrations.base_client.errors import MismatchingStateError
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from backend.auth.google_oauth import google
 from backend.auth.jwt_manager import EXPIRE_HOURS, create_token, verify_token
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
-
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
@@ -34,13 +34,37 @@ async def google_login(request: Request):
     summary="Callback от Google, обмен кода на профайл + выдача JWT",
 )
 async def google_callback(request: Request):
-    token = await google.authorize_access_token(request)
+    try:
+        token = await google.authorize_access_token(request)
+    except MismatchingStateError:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "State mismatch. Скорее всего, вы открывали /auth/google/login "
+                "не на том же хосте, что GOOGLE_REDIRECT_URI. "
+                "Попробуйте заново через http://127.0.0.1:8080/auth/google/login."
+            ),
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to obtain access token from Google: {e}",
+        )
+
     userinfo = token.get("userinfo")
     if not userinfo or "email" not in userinfo:
-        raise HTTPException(status_code=400, detail="Google auth failed")
+        raise HTTPException(
+            status_code=400,
+            detail=f"No 'userinfo.email' in token: {token}",
+        )
 
     email = userinfo["email"]
     jwt_token = create_token(email, {"name": userinfo.get("name")})
+
+    frontend_url = os.getenv("FRONTEND_URL")
+    if frontend_url:
+        redirect_to = f"{frontend_url.rstrip('/')}/?token={jwt_token}"
+        return RedirectResponse(url=redirect_to)
 
     return JSONResponse(
         {
