@@ -1,0 +1,99 @@
+{
+  "preprocessing_config": {
+    "dataset_preprocessing": [
+      {
+        "name": "PassengerId",
+        "data_type": "numerical",
+        "fillna_policy": "mean",
+        "transformations": null,
+        "drop": true
+      },
+      {
+        "name": "Pclass",
+        "data_type": "numerical",
+        "fillna_policy": "mean",
+        "transformations": "StandardScaler",
+        "drop": false
+      },
+      {
+        "name": "Name",
+        "data_type": "categorical",
+        "fillna_policy": "mode",
+        "transformations": null,
+        "drop": true
+      },
+      {
+        "name": "Sex",
+        "data_type": "categorical",
+        "fillna_policy": "mode",
+        "transformations": "LabelEncoder",
+        "drop": false
+      },
+      {
+        "name": "Age",
+        "data_type": "numerical",
+        "fillna_policy": "mean",
+        "transformations": "StandardScaler",
+        "drop": false
+      },
+      {
+        "name": "SibSp",
+        "data_type": "numerical",
+        "fillna_policy": "mean",
+        "transformations": "StandardScaler",
+        "drop": false
+      },
+      {
+        "name": "Parch",
+        "data_type": "numerical",
+        "fillna_policy": "mean",
+        "transformations": "StandardScaler",
+        "drop": false
+      },
+      {
+        "name": "Ticket",
+        "data_type": "categorical",
+        "fillna_policy": "mode",
+        "transformations": null,
+        "drop": true
+      },
+      {
+        "name": "Fare",
+        "data_type": "numerical",
+        "fillna_policy": "mean",
+        "transformations": "MinMaxScaler",
+        "drop": false
+      },
+      {
+        "name": "Cabin",
+        "data_type": "categorical",
+        "fillna_policy": "mode",
+        "transformations": null,
+        "drop": true
+      },
+      {
+        "name": "Embarked",
+        "data_type": "categorical",
+        "fillna_policy": "mode",
+        "transformations": "OneHotEncoder",
+        "drop": false
+      },
+      {
+        "name": "Survived",
+        "data_type": "numerical",
+        "fillna_policy": "mode",
+        "transformations": "StandardScaler",
+        "drop": true
+      }
+    ],
+    "target": "Fare"
+  },
+  "ml_config": {
+    "hyperparameters": {
+      "learning_rate": 0.1,
+      "max_depth": 3,
+      "n_estimators": 150
+    },
+    "model_class": "GradientBoostingRegressor"
+  }
+}
