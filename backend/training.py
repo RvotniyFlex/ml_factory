@@ -12,6 +12,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 from backend.preprocessing import preprocess_dataset
 from backend.utils.data_models import (
+    DatasetPreprocessing,
     ElasticNetParams,
     FitResult,
     GBRHParams,
@@ -26,7 +27,9 @@ logger = get_logger("backend")
 
 def train_regressor_task(
     df: pd.DataFrame, config: RunConfig
-) -> tuple[ElasticNet | GradientBoostingRegressor, FitResult]:
+) -> tuple[
+    ElasticNet | GradientBoostingRegressor, DatasetPreprocessing, FitResult, dict
+]:
     """
     Обучает модель (ElasticNet или GradientBoostingRegressor) по RunConfig.
 
@@ -36,15 +39,19 @@ def train_regressor_task(
 
     Returns:
         model (ElasticNet | GradientBoostingRegressor): обученная модель
-        FitResult: результат обучения с метриками
+        preprocessing_config (DatasetPreprocessing): конфигурация предобработки данных
+        scores (FitResult): результат обучения с метриками
+        transformers (dict): словарь преобразователей данных
     """
 
-    df_processed: pd.DataFrame = preprocess_dataset(df, config.preprocessing_config)
-    target: str = config.ml_config.target
+    df_processed, transformers = preprocess_dataset(
+        df, config.preprocessing_config, transformers={}
+    )
+    target: str = config.preprocessing_config.target
 
     if target not in df_processed.columns:
         logger.error(f"Целевая переменная '{target}' не найдена в данных")
-        return FitResult(name="No target", scores=[])
+        raise ValueError(f"Целевая переменная '{target}' не найдена в данных")
 
     X: pd.DataFrame = df_processed.drop(columns=[target])
     y: pd.DataFrame = df_processed[target]
@@ -65,7 +72,7 @@ def train_regressor_task(
         )
     else:
         logger.error(f"Неизвестный класс модели: {model_class}")
-        return FitResult(name="No model class", scores=[])
+        raise ValueError(f"Неизвестный класс модели: {model_class}")
 
     model.fit(X, y)
     y_pred: pd.Series = model.predict(X)
@@ -73,19 +80,27 @@ def train_regressor_task(
     safe_params = re.sub(
         r"[^a-zA-Z0-9]", "_", json.dumps(params.model_dump(), sort_keys=True)
     )
-    model_name = f"{model_class}_{safe_params[:40]}.joblib"
+    model_name: str = f"{model_class}_{safe_params}"
 
-    scores = [
+    scores: list = [
         ModelScore(name="R2", value=float(r2_score(y, y_pred))),
         ModelScore(name="MSE", value=float(mean_squared_error(y, y_pred))),
         ModelScore(name="MAE", value=float(mean_absolute_error(y, y_pred))),
     ]
 
-    return model, FitResult(name=model_name, scores=scores)
+    return (
+        model,
+        config.preprocessing_config,
+        FitResult(name=model_name, scores=scores),
+        transformers,
+    )
 
 
 async def save_trained_model(
     model,
+    preprocessing_config: DatasetPreprocessing,
+    transformers: dict,
+    scores: FitResult,
     user_id: str,
     data_id: str,
     model_name: str | None,
@@ -96,6 +111,9 @@ async def save_trained_model(
 
     Args:
         model: обученная модель sklearn
+        preprocessing_config (dict): конфигурация предобработки данных
+        transformers (dict): словарь преобразователей данных
+        scores (dict): метрики модели
         user_id (str): идентификатор пользователя
         data_id (str): идентификатор набора данных
         model_name (str | None): имя модели (если не задано — генерируется UUID)
@@ -105,8 +123,7 @@ async def save_trained_model(
         s3_key (str | None): путь к модели в S3, None — если не удалось сохранить
     """
     try:
-        key = f"models/{user_id}/{data_id}/{model_name}.joblib"
-
+        key: str = f"users/{user_id}/models/{data_id}/{model_name}"
         buffer = io.BytesIO()
         joblib.dump(model, buffer)
         buffer.seek(0)
@@ -114,13 +131,44 @@ async def save_trained_model(
         async with await s3_client_factory() as s3:
             await s3.put_object(
                 Bucket=settings.s3_bucket,
-                Key=key,
+                Key=key + "/model.joblib",
+                Body=buffer.getvalue(),
+                ContentType="application/octet-stream",
+            )
+
+        async with await s3_client_factory() as s3:
+            await s3.put_object(
+                Bucket=settings.s3_bucket,
+                Key=key + "/preprocessing.json",
+                Body=json.dumps(
+                    preprocessing_config.model_dump(), ensure_ascii=False, indent=2
+                ).encode("utf-8"),
+                ContentType="application/json",
+            )
+
+        async with await s3_client_factory() as s3:
+            await s3.put_object(
+                Bucket=settings.s3_bucket,
+                Key=key + "/scores.json",
+                Body=json.dumps(
+                    scores.model_dump(), ensure_ascii=False, indent=2
+                ).encode("utf-8"),
+                ContentType="application/json",
+            )
+
+        buffer = io.BytesIO()
+        joblib.dump(transformers, buffer)
+        buffer.seek(0)
+        async with await s3_client_factory() as s3:
+            await s3.put_object(
+                Bucket=settings.s3_bucket,
+                Key=key + "/transformers.joblib",
                 Body=buffer.getvalue(),
                 ContentType="application/octet-stream",
             )
 
         logger.info(
-            f"Модель {model_name} пользователя {user_id} успешно сохранена в S3 ({key})"
+            f"Объекты {model_name} пользователя {user_id} успешно сохранена в S3"
         )
         return key
 

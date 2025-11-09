@@ -2,7 +2,7 @@ import io
 
 import numpy as np
 import pandas as pd
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Path, UploadFile, status
 
 from backend.dataset_registry import (
     delete_file,
@@ -10,33 +10,40 @@ from backend.dataset_registry import (
     load_dataframe,
     upload_file,
 )
+from backend.utils.data_models import (
+    DatasetDescription,
+    DeleteDatasetResponse,
+    UploadDatasetResponse,
+    UserStorage,
+)
 from backend.utils.dependents import get_s3_client_factory
 
 router = APIRouter(
-    prefix="/dataset_registry",
-    tags=["Storage"],
+    prefix="/dataset_management",
+    tags=["Datasets"],
 )
 
 
 @router.get("/usage/{user_id}", status_code=status.HTTP_200_OK)
 async def get_user_storage_usage(
-    user_id: str, s3_client_factory=Depends(get_s3_client_factory)
-):
+    user_id: str = Path(description="Id пользователя"),
+    s3_client_factory=Depends(get_s3_client_factory),
+) -> UserStorage:
     """
     Получить объём хранилища, занимаемый пользователем.
     """
     usage = await get_storage_usage_mb(user_id, s3_client_factory)
     if usage is None:
-        return {"user_id": user_id, "usage_mb": 0.0}
-    return {"user_id": user_id, "usage_mb": round(usage, 2)}
+        return UserStorage.model_validate({"user_id": user_id, "usage_mb": 0.0})
+    return UserStorage.model_validate({"user_id": user_id, "usage_mb": round(usage, 2)})
 
 
 @router.post("/upload/{user_id}", status_code=status.HTTP_200_OK)
 async def upload_user_file(
-    user_id: str,
+    user_id: str = Path(description="Id пользователя"),
     uploaded_file: UploadFile = File(...),
     s3_client_factory=Depends(get_s3_client_factory),
-):
+) -> UploadDatasetResponse:
     """
     Загрузить parquet-файл пользователя в S3.
     """
@@ -74,12 +81,13 @@ async def upload_user_file(
                 detail=f"Пользователь {user_id} превысил квоту в 200 МБ",
             )
 
-        return {
-            "user_id": user_id,
-            "data_id": data_id,
-            "filename": uploaded_file.filename,
-            "status": "converted_to_parquet",
-        }
+        return UploadDatasetResponse.model_validate(
+            {
+                "user_id": user_id,
+                "data_id": data_id,
+                "filename": uploaded_file.filename,
+            }
+        )
 
     except HTTPException:
         raise
@@ -92,8 +100,10 @@ async def upload_user_file(
 
 @router.delete("/delete/{user_id}/{data_id}", status_code=status.HTTP_200_OK)
 async def delete_user_file(
-    user_id: str, data_id: str, s3_client_factory=Depends(get_s3_client_factory)
-):
+    user_id: str = Path(description="Id пользователя"),
+    data_id: str = Path(description="Id датасета"),
+    s3_client_factory=Depends(get_s3_client_factory),
+) -> DeleteDatasetResponse:
     """
     Удалить файл пользователя по ID.
     """
@@ -103,13 +113,17 @@ async def delete_user_file(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Файл {data_id} пользователя {user_id} не найден",
         )
-    return {"user_id": user_id, "data_id": data_id, "status": "deleted"}
+    return DeleteDatasetResponse.model_validate(
+        {"user_id": user_id, "data_id": data_id}
+    )
 
 
 @router.get("/load/{user_id}/{data_id}", status_code=status.HTTP_200_OK)
 async def load_user_dataframe(
-    user_id: str, data_id: str, s3_client_factory=Depends(get_s3_client_factory)
-):
+    user_id: str = Path(description="Id пользователя"),
+    data_id: str = Path(description="Id датасета"),
+    s3_client_factory=Depends(get_s3_client_factory),
+) -> DatasetDescription:
     """
     Семл данных пользователя и информация о данных.
     """
@@ -121,13 +135,24 @@ async def load_user_dataframe(
             detail=f"Файл {data_id} пользователя {user_id} не найден",
         )
 
-    df = df.replace({np.nan: None, np.inf: None, -np.inf: None})
+    col_type = {}
+    for col in df.columns:
+        data_type = "categorical" if df[col].dtype == "object" else "numerical"
+        col_type[col] = data_type
+
+    df: pd.DataFrame = df.replace({np.nan: None, np.inf: None, -np.inf: None})
+    na_columns: dict = df.isna().sum().to_dict()
+
     sample = df.head(5).to_dict(orient="records")
 
-    return {
-        "user_id": user_id,
-        "data_id": data_id,
-        "columns": list(df.columns),
-        "rows": len(df),
-        "sample": sample,
-    }
+    return DatasetDescription.model_validate(
+        {
+            "user_id": user_id,
+            "data_id": data_id,
+            "columns": list(df.columns),
+            "na_columns": na_columns,
+            "col_type": col_type,
+            "rows": len(df),
+            "sample": sample,
+        }
+    )

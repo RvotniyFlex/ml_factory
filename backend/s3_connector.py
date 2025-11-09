@@ -19,7 +19,7 @@ def s3_client_factory(
     Returns:
         client (Awaitable):  асинхронная функция, создающая S3-клиента при вызове
     """
-    cfg = Config(
+    cfg: Config = Config(
         region_name=settings.s3_region,
         retries={"max_attempts": settings.s3_max_attempts, "mode": "standard"},
         connect_timeout=settings.s3_connect_timeout,

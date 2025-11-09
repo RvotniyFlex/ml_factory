@@ -1,6 +1,7 @@
 from botocore.exceptions import ClientError
 from fastapi import APIRouter, Depends, Query, status
 
+from backend.utils.data_models import HealthCheckApp, HealthCheckS3
 from backend.utils.dependents import get_s3_client_factory
 from backend.utils.settings import settings
 
@@ -8,11 +9,11 @@ router = APIRouter(prefix="/health", tags=["Health"])
 
 
 @router.get("/app", status_code=status.HTTP_200_OK)
-async def health_app():
+async def health_app() -> HealthCheckApp:
     """
     Проверка, что основное приложение живо.
     """
-    return {"app": "ok"}
+    return HealthCheckApp.model_validate({"app": "ok"})
 
 
 @router.get("/s3", status_code=status.HTTP_200_OK)
@@ -21,7 +22,7 @@ async def health_s3(
     bucket: str = Query(
         default=settings.s3_bucket, description="Имя бакета для проверки"
     ),
-):
+) -> HealthCheckS3:
     """
     Проверка доступности S3-хранилища.
     """
@@ -40,4 +41,4 @@ async def health_s3(
     except Exception as e:
         result["s3"] = f"unknown error: {str(e)}"
 
-    return result
+    return HealthCheckS3.model_validate(result)
