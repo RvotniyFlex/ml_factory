@@ -1,14 +1,24 @@
+import os
 from contextlib import asynccontextmanager
 
 import aioboto3
 from botocore.exceptions import ClientError
+from dotenv import load_dotenv
 from fastapi import FastAPI
+from starlette.middleware.sessions import SessionMiddleware
 
-from backend.routers import client, dataset_management, health, ml_management
+from backend.routers import (
+    auth_routes,
+    client,
+    dataset_management,
+    health,
+    ml_management,
+)
 from backend.s3_connector import s3_client_factory
 from backend.utils.logger import get_logger, setup_logging
 from backend.utils.settings import settings
 
+load_dotenv()
 setup_logging()
 logger = get_logger("backend")
 
@@ -51,7 +61,16 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=os.getenv("SESSION_SECRET", "dev-session-secret"),
+    same_site="lax",
+    https_only=False,
+)
+
 app.include_router(health.router)
 app.include_router(dataset_management.router)
 app.include_router(ml_management.router)
 app.include_router(client.router)
+app.include_router(auth_routes.router)

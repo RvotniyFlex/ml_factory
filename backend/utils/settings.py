@@ -17,6 +17,17 @@ class Settings(BaseSettings):
     s3_max_attempts: int = Field(
         5, description="Максимальное кол-во попыток подключения к S3"
     )
+    google_client_id: str = Field(
+        description="Айди приложения авторизации oauth Google"
+    )
+    google_client_id: str = Field(description="Секрет Google разработчика")
+    google_redirect_uri: str = Field(description="Ссылка для авторизации")
+    jwt_secret: str = Field(description="Внутренний хэш авторизации")
+    jwt_algorithm: str = Field(
+        description="Способ создания внутреннего ключа авторизации"
+    )
+    jwt_expire_hours: int = Field(2, description="Сколько часов работает ключ")
+    session_secret: str = Field(description="Секрет сессии пользователя")
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
