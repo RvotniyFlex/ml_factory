@@ -1,4 +1,5 @@
 import datetime
+import os
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -13,8 +14,42 @@ from backend.utils.logger import get_logger, setup_logging
 
 st.set_page_config(page_title="AutoML Dashboard", layout="wide")
 
-api = BackendAPI()
+if "logger_initialized" not in st.session_state:
+    setup_logging()
+    st.session_state.logger_initialized = True
+logger = get_logger("frontend")
+
+query_params = st.query_params
+if "token" in query_params:
+    token_from_url = query_params["token"][0]
+    st.session_state["access_token"] = token_from_url
+
+token: Optional[str] = st.session_state.get("access_token")
+
+if not token:
+    st.title("🛡 Авторизация")
+
+    st.write("Чтобы пользоваться сервисом AutoML, выполните вход через Google.")
+
+    from dotenv import load_dotenv
+
+    load_dotenv()
+    backend_endpoint = os.getenv("BACKEND_ENDPOINT", "http://127.0.0.1:8080")
+    login_url = f"{backend_endpoint.rstrip('/')}/auth/google/login"
+
+    st.link_button("Войти через Google", login_url, type="primary")
+    st.stop()
+
+api = BackendAPI(token=token)
+
 USER_ID: int = 3
+
+st.sidebar.markdown("### Пользователь")
+st.sidebar.write("Вы авторизованы ✅")
+if st.sidebar.button("Выйти"):
+    st.session_state.pop("access_token", None)
+    st.query_params.clear()
+    st.rerun()
 
 st.sidebar.title("📂 Навигация")
 page: str = st.sidebar.radio(
@@ -27,11 +62,6 @@ page: str = st.sidebar.radio(
         "5️⃣ Технические операции",
     ],
 )
-
-if "logger_initialized" not in st.session_state:
-    setup_logging()
-    st.session_state.logger_initialized = True
-logger = get_logger("frontend")
 
 # Инициализируем session state
 

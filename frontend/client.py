@@ -10,12 +10,13 @@ class BackendAPI:
     Класс-обёртка для взаимодействия с backend API AutoML.
     """
 
-    def __init__(self, env_path: str = ".env") -> None:
+    def __init__(self, env_path: str = ".env", token: str | None = None) -> None:
         """
         Инициализация BackendAPI. Загружает переменные окружения и задаёт базовый URL API.
 
         Args:
             env_path (str): путь к .env файлу с настройками окружения
+            token (str | None): JWT токен авторизации
         """
         load_dotenv(env_path)
         self.backend_endpoint: str | None = os.getenv("BACKEND_ENDPOINT")
@@ -23,7 +24,18 @@ class BackendAPI:
         if not self.backend_endpoint:
             raise ValueError("BACKEND_ENDPOINT не найден в .env файле.")
 
+        self.token: str | None = token
         self.headers: dict[str, str] = {"accept": "application/json"}
+        if self.token:
+            self.headers["Authorization"] = f"Bearer {self.token}"
+
+    def set_token(self, token: str | None) -> None:
+        """Обновить токен после логина."""
+        self.token = token
+        if token:
+            self.headers["Authorization"] = f"Bearer {token}"
+        else:
+            self.headers.pop("Authorization", None)
 
     def list_all_models(self) -> Dict[str, Any]:
         """
