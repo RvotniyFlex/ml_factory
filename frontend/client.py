@@ -10,7 +10,7 @@ class BackendAPI:
     Класс-обёртка для взаимодействия с backend API AutoML.
     """
 
-    def __init__(self, env_path: str = "../.env") -> None:
+    def __init__(self, env_path: str = ".env") -> None:
         """
         Инициализация BackendAPI. Загружает переменные окружения и задаёт базовый URL API.
 
