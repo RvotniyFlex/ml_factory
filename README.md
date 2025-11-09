@@ -14,13 +14,10 @@
 ML_FACTORY/
 ├── .github/workflows/
 │   └── ci.yaml                    # CI-пайплайн GitHub Actions (тесты, линтинг и т.д.)
-│
-├── .pytest_cache/                 # Кэш pytest (автоматически создаётся)
-├── .ruff_cache/                   # Кэш линтера Ruff
-├── .vscode/                       # Настройки IDE VSCode
-│
 ├── backend/                       # Основной backend-код приложения
-│   │
+│   ├── auth # Логика авторизации
+│   │   ├── google_oauth.py        # Авторизация через oAuth Google
+│   │   └── jwt_manager.py         # Создание/управление токеном логина
 │   ├── grpc/                      # gRPC сервер и контракты
 │   │   ├── contracts/             
 │   │   │   ├── contracts_pb2.py           # Автоматически сгенерированные protobuf-классы
@@ -36,6 +33,7 @@ ML_FACTORY/
 │   │
 │   ├── routers/                   # FastAPI маршруты (REST API)
 │   │   ├── client.py              # Эндпоинты для работы с пользователем
+│   │   ├── auth_routes.py         # Авторизация и получение токена для логина
 │   │   ├── dataset_management.py  # Операции с датасетами
 │   │   ├── health.py              # Проверки состояния приложения и S3
 │   │   └── ml_management.py       # Обучение, предсказание и удаление моделей
