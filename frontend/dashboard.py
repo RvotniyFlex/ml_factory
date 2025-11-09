@@ -399,7 +399,11 @@ elif page.startswith("4️⃣"):
         st.stop()
 
     model_options: List[str] = models_resp["models"]
-    model_name: str = st.selectbox("Выберите модель для инференса:", model_options)
+    model_name: str = st.selectbox(
+        "Выберите модель для инференса:",
+        sorted(set(model_options)),
+        key="inference_model_select",
+    )
 
     preprocessing_info = api.load_dataset_info(USER_ID, selected_data_id)
 
@@ -457,9 +461,9 @@ elif page.startswith("5️⃣"):
     st.title("🛠 Технические операции")
 
     st.subheader("Информация о хранилище")
-    st.info("Получаем данные о размере хранилища...")
+    with st.spinner("Получаем данные о размере хранилища..."):
+        usage: Dict[str, Any] = api.storage_size(USER_ID)
 
-    usage: Dict[str, Any] = api.storage_size(USER_ID)
     if isinstance(usage, dict) and "usage_mb" in usage:
         st.metric("Используемое место", f"{usage['usage_mb']} MB")
     else:
@@ -512,14 +516,16 @@ elif page.startswith("5️⃣"):
     )
     selected_data_id: str = dataset_options[selected_dataset_for_model]
 
-    st.info("Загружаем список моделей...")
-    models_resp: Dict[str, Any] = api.list_models(USER_ID, selected_data_id)
+    with st.spinner("Загружаем список моделей..."):
+        models_resp: Dict[str, Any] = api.list_models(USER_ID, selected_data_id)
 
     if not models_resp or "models" not in models_resp or not models_resp["models"]:
         st.warning("Для выбранного датасета нет обученных моделей.")
     else:
         model_name = st.selectbox(
-            "Выберите модель для удаления:", models_resp["models"]
+            "Выберите модель для удаления:",
+            sorted(set(models_resp["models"])),
+            key="delete_model_select",
         )
         if st.button("Удалить модель"):
             with st.spinner("Удаляем модель..."):
