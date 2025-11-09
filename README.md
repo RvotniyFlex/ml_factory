@@ -77,6 +77,7 @@ ML_FACTORY/
 ├── .pre-commit-config.yaml        # Настройки pre-commit хуков (линтеры, форматтеры)
 ├── docker-compose.yaml            # Описание docker-сервисов (S3)
 ├── poetry.lock                    # Зафиксированные версии зависимостей
+├── makefile                       # Быстрый запуск сервиса
 ├── pyproject.toml                 # Конфигурация Poetry (зависимости, entrypoints и т.д.)
 └── README.md                      # Документация проекта
 ```
@@ -87,6 +88,33 @@ ML_FACTORY/
 
 ```bash
 poetry install
+```
+
+Запуск всего сервиса (бек, фрон, хранилище)
+
+```bash
+make run
+```
+
+После запуска будут доступны три сервиса:
+
+* Интерфейс (http://localhost:8501) - Streamlit
+* Бекэнд (http://localhost:8080/docs#/) - Swagger
+* S3 (http://localhost:9001) - WebUI
+
+
+Остановка всех сервисов
+
+```bash
+make stop
+```
+
+#### Запуск отдельных блоков
+
+Поднятие хранилище S3
+
+```bash
+docker compose up -d
 ```
 
 Запуск приложения на REST-api
@@ -108,7 +136,7 @@ poetry run python backend/grpc/server.py
 Запуск интерфейса
 
 ```bash
-streamlit run dashboard.py
+poetry run streamlit run frontend/dashboard.py --server.port 8501 --server.headless true
 ```
 
 ### Тестирование
