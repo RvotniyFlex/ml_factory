@@ -6,12 +6,7 @@ from starlette.config import Config
 
 load_dotenv()
 
-config = Config(
-    environ={
-        "GOOGLE_CLIENT_ID": os.getenv("GOOGLE_CLIENT_ID"),
-        "GOOGLE_CLIENT_SECRET": os.getenv("GOOGLE_CLIENT_SECRET"),
-    }
-)
+config = Config(environ=os.environ)
 
 oauth = OAuth(config)
 
