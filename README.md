@@ -14,13 +14,10 @@
 ML_FACTORY/
 ├── .github/workflows/
 │   └── ci.yaml                    # CI-пайплайн GitHub Actions (тесты, линтинг и т.д.)
-│
-├── .pytest_cache/                 # Кэш pytest (автоматически создаётся)
-├── .ruff_cache/                   # Кэш линтера Ruff
-├── .vscode/                       # Настройки IDE VSCode
-│
 ├── backend/                       # Основной backend-код приложения
-│   │
+│   ├── auth # Логика авторизации
+│   │   ├── google_oauth.py        # Авторизация через oAuth Google
+│   │   └── jwt_manager.py         # Создание/управление токеном логина
 │   ├── grpc/                      # gRPC сервер и контракты
 │   │   ├── contracts/             
 │   │   │   ├── contracts_pb2.py           # Автоматически сгенерированные protobuf-классы
@@ -36,6 +33,7 @@ ML_FACTORY/
 │   │
 │   ├── routers/                   # FastAPI маршруты (REST API)
 │   │   ├── client.py              # Эндпоинты для работы с пользователем
+│   │   ├── auth_routes.py         # Авторизация и получение токена для логина
 │   │   ├── dataset_management.py  # Операции с датасетами
 │   │   ├── health.py              # Проверки состояния приложения и S3
 │   │   └── ml_management.py       # Обучение, предсказание и удаление моделей
@@ -427,6 +425,88 @@ poetry run pytest tests
   - Использует схему: [HTTPValidationError](#schema-httpvalidationerror)
 
 ---
+
+#### `GET /auth/google/login`
+
+**Описание:** Google OAuth Login Endpoint  
+
+> Инициирует процесс авторизации через Google.  
+> Перенаправляет пользователя на страницу входа Google с запросом разрешений.  
+
+**Параметры:**  
+Нет.  
+
+**Ответы:**
+
+- **Код 307:** Redirect  
+  - Перенаправляет пользователя на страницу авторизации Google.  
+- **Код 500:** Ошибка конфигурации  
+  - Возвращается, если не задан `GOOGLE_REDIRECT_URI` в `.env`.
+
+---
+
+#### `GET /auth/google/callback`
+
+**Описание:** Google OAuth Callback Endpoint  
+
+> Получает ответ от Google после успешного входа,  
+> обменивает код авторизации на токен доступа и создает JWT-токен для пользователя.  
+> При наличии `FRONTEND_URL` перенаправляет обратно на Streamlit с `?token=<JWT>`.
+
+**Параметры:**  
+- `state` (обязательный, query): Защита от CSRF (генерируется автоматически Google API).  
+- `code` (обязательный, query): Код авторизации, который возвращает Google.  
+
+**Ответы:**
+
+- **Код 302:** Redirect  
+  - Перенаправляет на `FRONTEND_URL` с параметром `token=<JWT>`.  
+- **Код 200:** Successful Response (если не указан `FRONTEND_URL`)  
+  - Возвращает JSON с полями:  
+    ```json
+    {
+      "access_token": "<jwt_token>",
+      "email": "<user_email>",
+      "expires_in_hours": 2
+    }
+    ```
+- **Код 400:** Ошибка обмена кода или `state mismatch`.  
+- **Код 500:** Внутренняя ошибка при авторизации.
+
+---
+
+#### `GET /auth/me`
+
+**Описание:** Get Current User Endpoint  
+
+> Проверяет валидность JWT-токена и возвращает информацию о текущем пользователе.  
+
+**Параметры:**
+
+- Заголовок `Authorization` (обязательный):  
+  JWT-токен в формате  
+  ```
+  Authorization: Bearer <jwt_token>
+  ```
+
+**Ответы:**
+
+- **Код 200:** Successful Response  
+  ```json
+  {
+    "status": "ok",
+    "claims": {
+      "sub": "user@example.com",
+      "name": "User Name",
+      "iat": 1762702886,
+      "exp": 1762710086
+    }
+  }
+  ```
+- **Код 401:** Invalid or missing token  
+  ```json
+  { "detail": "Invalid token: ..." }
+  ```
 
 
 # Схемы данных
