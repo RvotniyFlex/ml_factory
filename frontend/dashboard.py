@@ -34,7 +34,7 @@ if not token:
     from dotenv import load_dotenv
 
     load_dotenv()
-    backend_endpoint = os.getenv("BACKEND_ENDPOINT", "http://127.0.0.1:8080")
+    backend_endpoint = os.getenv("BACKEND_PUBLIC_URL", "http://localhost:8080")
     login_url = f"{backend_endpoint.rstrip('/')}/auth/google/login"
 
     st.link_button("Войти через Google", login_url, type="primary")
