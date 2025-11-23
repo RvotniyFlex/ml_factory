@@ -3,11 +3,6 @@
 run:
 	docker compose up -d
 	@echo "Starting backend..."
-	@nohup poetry run uvicorn backend.main:app --host 0.0.0.0 --port 8080 > uvicorn.log 2>&1 & \
-	echo $$! > uvicorn.pid
-	@echo "Starting frontend..."
-	@nohup poetry run streamlit run frontend/dashboard.py --server.port 8501 --server.headless true > streamlit.log 2>&1 & \
-	echo $$! > streamlit.pid
 	@echo "✅ All services started."
 
 stop:
@@ -34,5 +29,3 @@ stop:
 	fi
 	@docker compose down || true
 	@echo "🛑 All services stopped."
-	rm streamlit.log
-	rm uvicorn.log
