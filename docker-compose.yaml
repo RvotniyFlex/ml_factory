@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   minio:
     image: minio/minio
@@ -15,6 +13,52 @@ services:
     command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data
+    networks:
+      - ml-factory-net
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: ml-factory-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # внутри докера minio доступен по имени сервиса, а не по localhost
+      S3_HOST: minio
+      # внешний URL фронта, чтобы редиректы OAuth шли на правильный адрес
+      FRONTEND_URL: "${FRONTEND_URL}"
+    depends_on:
+      - minio
+    ports:
+      - "8080:8080"
+    networks:
+      - ml-factory-net
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: ml-factory-frontend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # внутри docker-сети фронт ходит к бэку по имени сервиса
+      BACKEND_PUBLIC_URL: "http://localhost:8080"
+      BACKEND_ENDPOINT: "${BACKEND_ENDPOINT}"
+      FRONTEND_URL: "${FRONTEND_URL}"
+    depends_on:
+      - backend
+    ports:
+      - "8501:8501"
+    networks:
+      - ml-factory-net
 
 volumes:
   minio_data:
+
+networks:
+  ml-factory-net:
+    driver: bridge
