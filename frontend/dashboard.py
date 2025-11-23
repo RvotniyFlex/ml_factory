@@ -10,7 +10,7 @@ import streamlit as st
 from client import BackendAPI
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
-from backend.utils.logger import get_logger, setup_logging
+from utils.logger import get_logger, setup_logging
 
 st.set_page_config(page_title="AutoML Dashboard", layout="wide")
 
