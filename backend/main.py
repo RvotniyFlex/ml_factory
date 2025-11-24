@@ -15,8 +15,8 @@ from backend.routers import (
     ml_management,
 )
 from backend.s3_connector import s3_client_factory
-from backend.utils.logger import get_logger, setup_logging
-from backend.utils.settings import settings
+from utils.logger import get_logger, setup_logging
+from utils.settings import settings
 
 load_dotenv()
 setup_logging()

@@ -24,9 +24,9 @@ from backend.user_object import (
     get_user_models,
     get_user_scores,
 )
-from backend.utils.data_models import DatasetPreprocessing, RunConfig
-from backend.utils.logger import get_logger
-from backend.utils.settings import settings
+from utils.data_models import DatasetPreprocessing, RunConfig
+from utils.logger import get_logger
+from utils.settings import settings
 
 logger = get_logger("grpc_server")
 session = aioboto3.Session()

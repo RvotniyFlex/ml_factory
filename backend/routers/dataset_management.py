@@ -10,13 +10,13 @@ from backend.dataset_registry import (
     load_dataframe,
     upload_file,
 )
-from backend.utils.data_models import (
+from utils.data_models import (
     DatasetDescription,
     DeleteDatasetResponse,
     UploadDatasetResponse,
     UserStorage,
 )
-from backend.utils.dependents import get_s3_client_factory
+from utils.dependents import get_s3_client_factory
 
 router = APIRouter(
     prefix="/dataset_management",

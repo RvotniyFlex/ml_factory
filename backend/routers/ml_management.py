@@ -10,7 +10,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Path, status
 from backend.dataset_registry import load_dataframe
 from backend.preprocessing import preprocess_dataset
 from backend.training import save_trained_model, train_regressor_task
-from backend.utils.data_models import (
+from utils.data_models import (
     AvailableModels,
     DatasetPreprocessing,
     DeleteModelResponse,
@@ -21,9 +21,9 @@ from backend.utils.data_models import (
     ModelPred,
     RunConfig,
 )
-from backend.utils.dependents import get_s3_client_factory
-from backend.utils.logger import get_logger
-from backend.utils.settings import settings
+from utils.dependents import get_s3_client_factory
+from utils.logger import get_logger
+from utils.settings import settings
 
 router = APIRouter(prefix="/ml_management", tags=["Models"])
 logger = get_logger("backend")

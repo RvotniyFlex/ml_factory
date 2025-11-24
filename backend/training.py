@@ -11,7 +11,7 @@ from sklearn.linear_model import ElasticNet
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 from backend.preprocessing import preprocess_dataset
-from backend.utils.data_models import (
+from utils.data_models import (
     DatasetPreprocessing,
     ElasticNetParams,
     FitResult,
@@ -19,8 +19,8 @@ from backend.utils.data_models import (
     ModelScore,
     RunConfig,
 )
-from backend.utils.logger import get_logger
-from backend.utils.settings import settings
+from utils.logger import get_logger
+from utils.settings import settings
 
 logger = get_logger("backend")
 

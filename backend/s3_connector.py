@@ -4,7 +4,7 @@ import aioboto3
 from aiobotocore.client import AioBaseClient
 from botocore.config import Config
 
-from backend.utils.settings import settings
+from utils.settings import settings
 
 
 def s3_client_factory(

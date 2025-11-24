@@ -6,7 +6,7 @@ from sklearn.preprocessing import (
     StandardScaler,
 )
 
-from backend.utils.data_models import ColumnPreprocessing, DatasetPreprocessing
+from utils.data_models import ColumnPreprocessing, DatasetPreprocessing
 
 
 def apply_fillna_policy(df: pd.DataFrame, col_cfg: ColumnPreprocessing) -> pd.DataFrame:

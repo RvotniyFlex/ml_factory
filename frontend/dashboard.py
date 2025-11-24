@@ -10,7 +10,7 @@ import streamlit as st
 from client import BackendAPI
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
-from backend.utils.logger import get_logger, setup_logging
+from utils.logger import get_logger, setup_logging
 
 st.set_page_config(page_title="AutoML Dashboard", layout="wide")
 
@@ -34,7 +34,7 @@ if not token:
     from dotenv import load_dotenv
 
     load_dotenv()
-    backend_endpoint = os.getenv("BACKEND_ENDPOINT", "http://127.0.0.1:8080")
+    backend_endpoint = os.getenv("BACKEND_PUBLIC_URL", "http://localhost:8080")
     login_url = f"{backend_endpoint.rstrip('/')}/auth/google/login"
 
     st.link_button("Войти через Google", login_url, type="primary")

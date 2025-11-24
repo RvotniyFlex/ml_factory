@@ -1,9 +1,9 @@
 from botocore.exceptions import ClientError
 from fastapi import APIRouter, Depends, Query, status
 
-from backend.utils.data_models import HealthCheckApp, HealthCheckS3
-from backend.utils.dependents import get_s3_client_factory
-from backend.utils.settings import settings
+from utils.data_models import HealthCheckApp, HealthCheckS3
+from utils.dependents import get_s3_client_factory
+from utils.settings import settings
 
 router = APIRouter(prefix="/health", tags=["Health"])
 
