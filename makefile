@@ -1,11 +1,50 @@
-.PHONY: run stop
+K8S_NS  := ml-factory
+K8S_DIR := k8s
 
-run:
-	docker compose up -d
-	@echo "Starting backend..."
-	@echo "✅ All services started."
+.PHONY: k8s-start k8s-build k8s-apply k8s-wait k8s-up k8s-port-forward k8s-down
 
-stop:
-	@echo "Stopping services..."
-	@docker compose down || true
-	@echo "🛑 All services stopped."
+k8s-start:
+	minikube start --driver=docker
+
+k8s-build:
+	eval $$(minikube docker-env) && \
+		docker build -t ml-factory-backend:latest -f backend/Dockerfile . && \
+		docker build -t ml-factory-frontend:latest -f frontend/Dockerfile .
+
+k8s-apply:
+	kubectl apply -f $(K8S_DIR)/namespace.yaml
+	kubectl apply -f $(K8S_DIR)/configmap.yaml
+	kubectl apply -f $(K8S_DIR)/secret.yaml
+	kubectl apply -f $(K8S_DIR)/minio.yaml
+	kubectl apply -f $(K8S_DIR)/backend.yaml
+	kubectl apply -f $(K8S_DIR)/frontend.yaml
+	- kubectl apply -f $(K8S_DIR)/ingress.yaml
+
+## 🔥 Ждём пока ВСЕ поды станут Ready
+k8s-wait:
+	@echo "⏳ Ожидание запуска подов..."
+	kubectl wait --for=condition=ready pod -l app=backend -n $(K8S_NS) --timeout=180s
+	kubectl wait --for=condition=ready pod -l app=frontend -n $(K8S_NS) --timeout=180s
+	kubectl wait --for=condition=ready pod -l app=minio -n $(K8S_NS) --timeout=180s
+	@echo "✅ Все поды готовы"
+
+## ✅ Полный запуск со всеми ожиданиями
+k8s-up: k8s-start k8s-build k8s-apply k8s-wait k8s-port-forward
+	@echo "🚀 Kubernetes кластер готов. Используйте make k8s-port-forward"
+
+k8s-port-forward:
+	@echo "🌐 Доступ:"
+	@echo "Frontend: http://localhost:8501"
+	@echo "Backend:  http://localhost:8080/docs"
+	kubectl port-forward svc/frontend 8501:8501 -n $(K8S_NS) &
+	kubectl port-forward svc/backend 8080:8080 -n $(K8S_NS)
+
+k8s-down:
+	- kubectl delete -f $(K8S_DIR)/frontend.yaml -n $(K8S_NS)
+	- kubectl delete -f $(K8S_DIR)/backend.yaml -n $(K8S_NS)
+	- kubectl delete -f $(K8S_DIR)/minio.yaml -n $(K8S_NS)
+	- kubectl delete -f $(K8S_DIR)/ingress.yaml -n $(K8S_NS)
+	- kubectl delete -f $(K8S_DIR)/configmap.yaml -n $(K8S_NS)
+	- kubectl delete -f $(K8S_DIR)/secret.yaml -n $(K8S_NS)
+	- kubectl delete -f $(K8S_DIR)/namespace.yaml
+	minikube stop
