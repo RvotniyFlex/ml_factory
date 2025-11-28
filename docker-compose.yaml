@@ -16,6 +16,24 @@ services:
     networks:
       - ml-factory-net
 
+  dvc-sync-agent:
+    build: ./dvc
+    environment:
+      GIT_URL: "https://github.com/RvotniyFlex/ml_factory.git"
+      DVC_SYNC_S3_BUCKET: "models-bucket"
+      DVC_SYNC_S3_PREFIX: "users/"
+      AWS_ACCESS_KEY_ID: "${S3_ACCESS_KEY}"
+      AWS_SECRET_ACCESS_KEY: "${S3_SECRET_KEY}"
+      AWS_REGION: "${S3_REGION}"
+      DVC_ENDPOINT_URL: "http://minio:9000"
+      DVC_SYNC_INTERVAL: 120
+      DVC_SYNC_BRANCH: dvc
+      DVC_SYNC_LOCAL_DATA_ROOT: data/s3_mirror
+    networks:
+      - ml-factory-net
+    depends_on:
+      - minio
+
   backend:
     build:
       context: .

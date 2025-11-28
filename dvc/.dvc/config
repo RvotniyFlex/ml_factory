@@ -1,0 +1,7 @@
+[core]
+    remote = minio
+['remote "minio"']
+    url = s3://dvc-store
+    endpointurl = http://minio:9000
+    use_ssl = false
+    region = eu-central-1
