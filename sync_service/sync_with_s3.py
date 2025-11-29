@@ -72,19 +72,16 @@ def list_s3_parquet_keys() -> list[str]:
         keys (set[str]): Список ключей S3.
     """
     keys: list = []
-    params: dict = {"Bucket": BUCKET}  # , "Prefix": PREFIX}
+    params: dict = {"Bucket": BUCKET}
 
     with s3_client_factory() as client:
         resp: dict = client.list_objects_v2(**params)
-
-    logger.info(f'Contents: {resp.get("Contents", [])}')
 
     for obj in resp.get("Contents", []):
         key: str = obj["Key"]
         if key.endswith(".parquet"):
             keys.append(key)
 
-    logger.info("11111")
     logger.info(f"Найдено: {len(keys)} файлов parquet в S3")
     return keys
 
@@ -164,7 +161,6 @@ def main() -> None:
         - пушит данные в DVC remote,
         - пушит изменения в GitHub.
     """
-    logger.info("2222")
 
     ensure_bucket_exists(REMOTE_BUCKET)
     os.makedirs(FULL_DATA_ROOT, exist_ok=True)

@@ -25,6 +25,8 @@ git config --global user.name "$AUTO_NAME"
 while true; do
     git pull origin "$DVC_SYNC_BRANCH" --rebase || true
     dvc pull || true
+    cd /app
     python -m sync_service.sync_with_s3 || true
+    cd /repo
     sleep ${DVC_SYNC_INTERVAL}
 done
