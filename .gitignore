@@ -217,3 +217,5 @@ __marimo__/
 
 # Dev
 .vscode
+
+k8s/secret.yaml

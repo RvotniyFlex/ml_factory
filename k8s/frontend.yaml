@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: ml-factory
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: ml-factory-frontend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8501
+          env:
+            - name: BACKEND_ENDPOINT
+              value: "http://backend:8080"
+            - name: FRONTEND_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: ml-config
+                  key: FRONTEND_URL
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: ml-factory
+spec:
+  selector:
+    app: frontend
+  ports:
+    - name: http
+      port: 8501
+      targetPort: http
+  type: ClusterIP
