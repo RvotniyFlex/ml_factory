@@ -77,11 +77,14 @@ def list_s3_parquet_keys() -> list[str]:
     with s3_client_factory() as client:
         resp: dict = client.list_objects_v2(**params)
 
+    logger.info(f'Contents: {resp.get("Contents", [])}')
+
     for obj in resp.get("Contents", []):
         key: str = obj["Key"]
-        if key.endswith(".csv"):
+        if key.endswith(".parquet"):
             keys.append(key)
 
+    logger.info("11111")
     logger.info(f"Найдено: {len(keys)} файлов parquet в S3")
     return keys
 
@@ -99,7 +102,7 @@ def list_local_tracked() -> dict[str, str]:
 
     for dirpath, _, filenames in os.walk(FULL_DATA_ROOT):
         for f in filenames:
-            if not f.endswith(".csv"):
+            if not f.endswith(".parquet"):
                 continue
             local_path: str = os.path.join(dirpath, f)
 
@@ -161,6 +164,8 @@ def main() -> None:
         - пушит данные в DVC remote,
         - пушит изменения в GitHub.
     """
+    logger.info("2222")
+
     ensure_bucket_exists(REMOTE_BUCKET)
     os.makedirs(FULL_DATA_ROOT, exist_ok=True)
 
