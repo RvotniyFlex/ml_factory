@@ -200,9 +200,11 @@ elif page.startswith("2️⃣"):
                     fillna_policy = st.selectbox(
                         "FillNA",
                         options=fill_options,
-                        index=fill_options.index(row["fillna_policy"])
-                        if row["fillna_policy"] in fill_options
-                        else 0,
+                        index=(
+                            fill_options.index(row["fillna_policy"])
+                            if row["fillna_policy"] in fill_options
+                            else 0
+                        ),
                         key=f"fill_{i}",
                     )
 
@@ -311,12 +313,16 @@ elif page.startswith("2️⃣"):
                             {
                                 "name": row["name"],
                                 "data_type": row["col_type"],
-                                "fillna_policy": None
-                                if row["fillna_policy"] in ["–", "-", "None"]
-                                else row["fillna_policy"],
-                                "transformations": None
-                                if row["transformations"] in ["None", "-", "–"]
-                                else row["transformations"],
+                                "fillna_policy": (
+                                    None
+                                    if row["fillna_policy"] in ["–", "-", "None"]
+                                    else row["fillna_policy"]
+                                ),
+                                "transformations": (
+                                    None
+                                    if row["transformations"] in ["None", "-", "–"]
+                                    else row["transformations"]
+                                ),
                                 "drop": row["drop"],
                             }
                             for row in preprocessing
