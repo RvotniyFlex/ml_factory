@@ -52,6 +52,9 @@ def s3_client():
     return boto3.client(
         "s3",
         region_name=REGION,
+        endpoint_url=os.environ.get("DVC_ENDPOINT_URL"),
+        aws_access_key_id=os.environ.get("AWS_ACCESS_KEY_ID"),
+        aws_secret_access_key=os.environ.get("AWS_SECRET_ACCESS_KEY"),
         config=Config(signature_version="s3v4"),
     )
 
@@ -61,25 +64,17 @@ def s3_client():
 # -----------------------------
 def list_s3_parquet_keys() -> Set[str]:
     client = s3_client()
-    keys = set()
-    continuation = None
+    keys = []
 
-    while True:
-        params = {"Bucket": BUCKET, "Prefix": PREFIX}
-        if continuation:
-            params["ContinuationToken"] = continuation
+    params = {"Bucket": BUCKET}  # , "Prefix": PREFIX}
 
-        resp = client.list_objects_v2(**params)
+    resp = client.list_objects_v2(**params)
+    print(resp.get("Contents"))
 
-        for obj in resp.get("Contents", []):
-            key = obj["Key"]
-            if key.endswith(".parquet"):
-                keys.add(key)
-
-        if resp.get("IsTruncated"):
-            continuation = resp.get("NextContinuationToken")
-        else:
-            break
+    for obj in resp.get("Contents", []):
+        key = obj["Key"]
+        if key.endswith(".csv"):
+            keys.append(key)
 
     print(f"[INFO] Found {len(keys)} parquet files in S3")
     return keys
@@ -92,7 +87,7 @@ def list_local_tracked() -> Dict[str, str]:
 
     for dirpath, _, filenames in os.walk(FULL_DATA_ROOT):
         for f in filenames:
-            if not f.endswith(".parquet"):
+            if not f.endswith(".csv"):
                 continue
             local_path = os.path.join(dirpath, f)
 
