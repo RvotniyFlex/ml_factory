@@ -1,6 +1,5 @@
 [core]
     remote = minio
-
 ['remote "minio"']
     url = s3://dvc-store
     endpointurl = http://minio:9000
@@ -8,3 +7,10 @@
     region = eu-central-1
     access_key_id = user
     secret_access_key = password
+['remote "models"']
+    url = s3://models-bucket
+    endpointurl = http://minio:9000
+    access_key_id = user
+    secret_access_key = password
+    region = ""
+    use_ssl = false
