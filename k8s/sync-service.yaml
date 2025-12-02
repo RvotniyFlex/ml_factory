@@ -52,7 +52,7 @@ spec:
                     key: GIT_URL
 
             - name: DVC_SYNC_BRANCH
-              value: "dvc"                
+              value: "dev"                
 
             - name: DVC_SYNC_S3_PREFIX
               value: "users/"                      
