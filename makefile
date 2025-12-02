@@ -40,7 +40,7 @@ k8s-port-forward:
 	@echo "🌐 Доступ:"
 	@echo "Frontend: http://localhost:8501"
 	@echo "Backend:  http://localhost:≠8080/docs"
-	@echo "minio: http://minio:9001"
+	@echo "minio: http://localhost:9001"
 	kubectl port-forward svc/frontend 8501:8501 -n $(K8S_NS) &
 	kubectl port-forward svc/backend 8080:8080 -n $(K8S_NS) &
 	kubectl port-forward svc/minio 9001:9001 -n $(K8S_NS)
