@@ -219,3 +219,4 @@ __marimo__/
 .vscode
 
 k8s/secret.yaml
+mlruns
