@@ -12,4 +12,6 @@ data:
   S3_PORT: "9000"
   S3_CONSOLE_PORT: "9001"
   GOOGLE_REDIRECT_URI: "http://localhost:8080/auth/google/callback"
+  MLFLOW_TRACKING_URI: "http://mlflow:5001"
+  MLFLOW_ARTIFACT_ROOT: "s3://models-bucket/mlflow-artifacts"
 
