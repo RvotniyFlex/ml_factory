@@ -80,8 +80,30 @@ services:
     networks:
       - ml-factory-net
 
+  mlflow:
+    build:
+      context: .
+      dockerfile: mlflow/Dockerfile
+    container_name: mlflow
+    restart: always
+    environment:
+      MLFLOW_TRACKING_URI: http://localhost:5001
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY}
+      AWS_DEFAULT_REGION: ${S3_REGION}
+    depends_on:
+      - minio
+    ports:
+      - "5001:5001"
+    volumes:
+      - mlflow_data:/mlflow
+    networks:
+      - ml-factory-net
+
 volumes:
   minio_data:
+  mlflow_data:
 
 networks:
   ml-factory-net:
