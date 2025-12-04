@@ -1,0 +1,10 @@
+[core]
+    remote = minio
+
+['remote "minio"']
+    url = s3://${REMOTE_BUCKET}
+    endpointurl = ${DVC_ENDPOINT_URL}
+    use_ssl = false
+    region = ${S3_REGION}
+    access_key_id = ${S3_ACCESS_KEY}
+    secret_access_key = ${S3_SECRET_KEY}

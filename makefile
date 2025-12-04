@@ -13,32 +13,34 @@ k8s-build:
 		docker build -t ml-factory-sync-service:latest -f sync_service/Dockerfile . && \
 		docker build -t ml-factory-mlflow:latest -f mlflow/Dockerfile .
 
-
-
-k8s-apply:
+k8s-apply-minio:
 	kubectl apply -f $(K8S_DIR)/namespace.yaml
 	kubectl apply -f $(K8S_DIR)/configmap.yaml
 	kubectl apply -f $(K8S_DIR)/secret.yaml
 	kubectl apply -f $(K8S_DIR)/minio.yaml
+
+k8s-wait-minio:
+	@echo "Ожидание готовности MinIO..."
+	kubectl wait --for=condition=available deployment/minio -n $(K8S_NS) --timeout=180s
+	@echo "MinIO готов"
+
+k8s-apply-rest:
 	kubectl apply -f $(K8S_DIR)/backend.yaml
 	kubectl apply -f $(K8S_DIR)/frontend.yaml
 	kubectl apply -f $(K8S_DIR)/sync-service.yaml
 	kubectl apply -f $(K8S_DIR)/mlflow.yaml
 	- kubectl apply -f $(K8S_DIR)/ingress.yaml
 
-## 🔥 Ждём пока ВСЕ поды станут Ready
-k8s-wait:
-	@echo "⏳ Ожидание запуска подов..."
-	kubectl wait --for=condition=ready pod -l app=minio -n $(K8S_NS) --timeout=180s
-	kubectl wait --for=condition=ready pod -l app=backend -n $(K8S_NS) --timeout=180s
-	kubectl wait --for=condition=ready pod -l app=dvc-sync-agent -n $(K8S_NS) --timeout=180s
-	kubectl wait --for=condition=ready pod -l app=frontend -n $(K8S_NS) --timeout=180s
-	kubectl wait --for=condition=ready pod -l app=mlflow -n $(K8S_NS) --timeout=180s
-	@echo "✅ Все поды готовы"
+k8s-wait-rest:
+	@echo "Ожидание запуска остальных деплоев..."
+	kubectl wait --for=condition=available deployment/backend -n $(K8S_NS) --timeout=180s
+	kubectl wait --for=condition=available deployment/dvc-sync-agent -n $(K8S_NS) --timeout=180s
+	kubectl wait --for=condition=available deployment/frontend -n $(K8S_NS) --timeout=180s
+	kubectl wait --for=condition=available deployment/mlflow -n $(K8S_NS) --timeout=180s
+	@echo "Все деплои готовы"
 
-## ✅ Полный запуск со всеми ожиданиями
-k8s-up: k8s-start k8s-build k8s-apply k8s-wait k8s-port-forward
-	@echo "🚀 Kubernetes кластер готов"
+k8s-up: k8s-start k8s-build k8s-apply-minio k8s-wait-minio k8s-apply-rest k8s-wait-rest k8s-port-forward
+	@echo "Kubernetes кластер готов"
 
 k8s-port-forward:
 	@echo "🌐 Доступ:"
