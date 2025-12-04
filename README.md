@@ -4,6 +4,8 @@
 
 Для хранения историчности датасетов и их версионирования мы подключили dvc. С небольшим интервалом sync_service сканирует файлы на s3 и индексирует их, при случайном удалении датасета или его изменении пользователем сервис фиксирует их с помощью dvc и пушит файл с метаданными на гит проекта. Так мы сможем откатиться до нужной нам версии.
 
+Сервис обернут в k8s кластер и поднимается одной командой через makefile
+
 ### Команда
 
 * Кондратьева Валерия
@@ -33,25 +35,36 @@ ML_FACTORY/
 │   ├── protos/
 │   │   └── contracts.proto        # Исходный .proto файл с описанием gRPC API
 │   │
-│   ├── routers/                   # FastAPI маршруты (REST API)
-│   │   ├── client.py              # Эндпоинты для работы с пользователем
-│   │   ├── auth_routes.py         # Авторизация и получение токена для логина
-│   │   ├── dataset_management.py  # Операции с датасетами
-│   │   ├── health.py              # Проверки состояния приложения и S3
-│   │   └── ml_management.py       # Обучение, предсказание и удаление моделей
-│   │
-│   ├── utils/                     # Вспомогательные модули
-│   │   ├── __init__.py
-│   │   ├── data_models.py         # Pydantic модели данных (RunConfig, DatasetPreprocessing и др.)
-│   │   ├── dependents.py          # Зависимости FastAPI (s3_client_factory)
-│   │   ├── logger.py              # Настройка логирования
-│   │   ├── settings.py            # Настройки окружения и конфигурация (Модель данных .env)
-│   │   ├── dataset_registry.py    # Функции для загрузки и удаления датасетов из S3
-│   │   ├── main.py                # Точка входа FastAPI-приложения
-│   │   ├── preprocessing.py       # Предобработка данных и сериализация трансформеров
-│   │   ├── s3_connector.py        # Подключение к S3-хранилищу (aioboto3)
-│   │   ├── training.py            # Обучение ML-моделей, сохранение и загрузка
-│   │   └── user_object.py         # Управление объектами пользователя (датасеты, модели)
+│   └── routers/                   # FastAPI маршруты (REST API)
+│      ├── client.py              # Эндпоинты для работы с пользователем
+│      ├── auth_routes.py         # Авторизация и получение токена для логина
+│      ├── dataset_management.py  # Операции с датасетами
+│      ├── health.py              # Проверки состояния приложения и S3
+│      └── ml_management.py       # Обучение, предсказание и удаление моделей
+│   
+├── utils/                     # Вспомогательные модули
+│    ├── __init__.py
+│    ├── data_models.py         # Pydantic модели данных (RunConfig, DatasetPreprocessing и др.)
+│    ├── dependents.py          # Зависимости FastAPI (s3_client_factory)
+│    ├── logger.py              # Настройка логирования
+│    ├── settings.py            # Настройки окружения и конфигурация (Модель данных .env)
+│    ├── dataset_registry.py    # Функции для загрузки и удаления датасетов из S3
+│    ├── main.py                # Точка входа FastAPI-приложения
+│    ├── preprocessing.py       # Предобработка данных и сериализация трансформеров
+│    ├── s3_connector.py        # Подключение к S3-хранилищу (aioboto3)
+│    ├── training.py            # Обучение ML-моделей, сохранение и загрузка
+│    └── user_object.py         # Управление объектами пользователя (датасеты, модели)
+│
+├── k8s                        # конфигурация k8s
+│   ├── backend.yaml           # Backend (FastAPI): Deployment + Service
+│   ├── configmap.yaml         # Общие настройки (S3_REGION, S3_BUCKET, прочие переменные)
+│   ├── frontend.yaml          # Frontend (Streamlit): Deployment + Service
+│   ├── ingress.yaml           # Ingress для внешнего доступа: frontend, backend, mlflow
+│   ├── minio.yaml             # MinIO: Deployment + Service + PVC для S3-хранилища
+│   ├── mlflow.yaml            # MLflow Tracking Server: Deployment + Service + PVC
+│   ├── namespace.yaml         # Создаёт отдельный namespace ml-factory
+│   ├── secret.yaml            # Секретные данные (S3 ключи, Git токен, пароли)
+│   └── sync-service.yaml      # DVC Sync Agent: Deployment, синхронизация S3 <-> DVC <-> Git
 │
 ├── data/                          # Примеры данных и конфигураций
 │   ├── test.csv                   # Тестовый CSV-дataset
@@ -91,59 +104,28 @@ ML_FACTORY/
 
 ### Запуск проекта
 
-Установка зависимостей 
+Установка зависимостей k8s составляющих
+
+* https://kubernetes.io/ru/docs/tasks/tools/install-kubectl/ - kubectl
+* https://kubernetes.io/ru/docs/tasks/tools/install-minikube/ - minikube
+
+Запуск всего сервиса (кластер k8s)
 
 ```bash
-poetry install
+make k8s-up
 ```
 
-Запуск всего сервиса (бек, фрон, хранилище)
-
-```bash
-make run
-```
-
-После запуска будут доступны три сервиса:
+После запуска будут доступны следующие сервисы:
 
 * Интерфейс (http://localhost:8501) - Streamlit
 * Бекэнд (http://localhost:8080/docs#/) - Swagger
 * S3 (http://localhost:9001) - WebUI
-
+* MlFlow (http://localhost:5001) - WebUI
 
 Остановка всех сервисов
 
 ```bash
-make stop
-```
-
-#### Запуск отдельных блоков
-
-Поднятие хранилище S3
-
-```bash
-docker compose up -d
-```
-
-Запуск приложения на REST-api
-
-```bash
-poetry run uvicorn backend.main:app --host 0.0.0.0 --port 8080
-```
-
-Взаимодействие возможно через встроенный Swagger Fast-api __http://localhost:8080/docs__
-
-Запуск приложения на gRPC-api
-
-```bash
-poetry run python backend/grpc/server.py
-```
-
-Взаимодействие возможно через ноутбук-клиент __backend/grpc/client.ipynb__
-
-Запуск интерфейса
-
-```bash
-poetry run streamlit run frontend/dashboard.py --server.port 8501 --server.headless true
+make k8s-down
 ```
 
 ### Тестирование
@@ -151,6 +133,7 @@ poetry run streamlit run frontend/dashboard.py --server.port 8501 --server.headl
 Для разработки и отладки были написаны тесты на основные функции
 
 ```bash
+poetry install
 poetry run pytest tests 
 ```
 
