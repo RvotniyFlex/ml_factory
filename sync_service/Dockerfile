@@ -8,8 +8,6 @@ RUN pip install --no-cache-dir "poetry>=1.8.0"
 
 WORKDIR /app
 
-ENV PYTHONPATH="/app:${PYTHONPATH}" 
-
 COPY sync_service sync_service
 COPY pyproject.toml poetry.lock* /app/
 RUN poetry config virtualenvs.create false
