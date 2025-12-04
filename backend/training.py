@@ -10,6 +10,7 @@ from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.linear_model import ElasticNet
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
+import mlflow
 from backend.preprocessing import preprocess_dataset
 from utils.data_models import (
     DatasetPreprocessing,
@@ -135,7 +136,9 @@ async def save_trained_model(
                 Body=buffer.getvalue(),
                 ContentType="application/octet-stream",
             )
-
+        mlflow.sklearn.log_model(
+            model, artifact_path=model_name, registered_model_name=model_name
+        )
         async with await s3_client_factory() as s3:
             await s3.put_object(
                 Bucket=settings.s3_bucket,

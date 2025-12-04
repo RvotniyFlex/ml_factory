@@ -7,6 +7,7 @@ import pandas as pd
 from aiobotocore.client import AioBaseClient
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, status
 
+import mlflow
 from backend.dataset_registry import load_dataframe
 from backend.preprocessing import preprocess_dataset
 from backend.training import save_trained_model, train_regressor_task
@@ -120,7 +121,6 @@ async def predict_endpoint(
     """
     Делает предсказание по обученной модели пользователя.
     """
-    model_key = f"users/{user_id}/models/{data_id}/{model_name}/model.joblib"
     preprocessing_key = (
         f"users/{user_id}/models/{data_id}/{model_name}/preprocessing.json"
     )
@@ -166,11 +166,13 @@ async def predict_endpoint(
                 )
 
             try:
-                model_obj = await s3.get_object(
-                    Bucket=settings.s3_bucket, Key=model_key
-                )
-                model_bytes = await model_obj["Body"].read()
-                model = joblib.load(io.BytesIO(model_bytes))
+                # model_obj = await s3.get_object(
+                #     Bucket=settings.s3_bucket, Key=model_key
+                # )
+                # model_bytes = await model_obj["Body"].read()
+                # model = joblib.load(io.BytesIO(model_bytes))
+                model_uri = f"models:/{model_name}/latest"
+                model = mlflow.pyfunc.load_model(model_uri)
                 logger.info(f"Модель {model_name} успешно загружена из S3.")
             except s3.exceptions.NoSuchKey:
                 raise HTTPException(status_code=404, detail="Модель не найдена.")
