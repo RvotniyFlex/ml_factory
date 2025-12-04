@@ -1,6 +1,5 @@
 [core]
     remote = minio
-
 ['remote "minio"']
     url = s3://${REMOTE_BUCKET}
     endpointurl = ${DVC_ENDPOINT_URL}
@@ -8,3 +7,10 @@
     region = ${AWS_REGION}
     access_key_id = ${AWS_ACCESS_KEY_ID}
     secret_access_key = ${AWS_SECRET_ACCESS_KEY}
+['remote "models"']
+    url = s3://models-bucket
+    endpointurl = http://minio:9000
+    access_key_id = user
+    secret_access_key = password
+    region = ""
+    use_ssl = false
