@@ -3,9 +3,9 @@ from typing import Awaitable, Callable
 
 from aiobotocore.client import AioBaseClient
 
-from backend.utils.data_models import DatasetInfo, FitResult, ModelScore
-from backend.utils.logger import get_logger
-from backend.utils.settings import settings
+from utils.data_models import DatasetInfo, FitResult, ModelScore
+from utils.logger import get_logger
+from utils.settings import settings
 
 logger = get_logger("backend")
 

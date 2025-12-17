@@ -5,8 +5,8 @@ from typing import Awaitable, Callable
 import pandas as pd
 from aiobotocore.client import AioBaseClient
 
-from backend.utils.logger import get_logger
-from backend.utils.settings import settings
+from utils.logger import get_logger
+from utils.settings import settings
 
 MAX_STORAGE_MB = 200
 

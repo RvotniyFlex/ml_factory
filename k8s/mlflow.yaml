@@ -1,0 +1,96 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mlflow-backend
+  namespace: ml-factory
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mlflow
+  namespace: ml-factory
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mlflow
+  template:
+    metadata:
+      labels:
+        app: mlflow
+    spec:
+      containers:
+        - name: mlflow
+
+          image: ml-factory-mlflow:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            # MinIO как S3
+            - name: MLFLOW_S3_ENDPOINT_URL
+              value: "http://minio:9000"
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: ml-secrets
+                  key: S3_ACCESS_KEY
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ml-secrets
+                  key: S3_SECRET_KEY
+            - name: AWS_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: ml-config
+                  key: S3_REGION
+            - name: MLFLOW_SERVER_ALLOWED_HOSTS
+              value: "*"
+
+            # Backend store и artifact store
+            - name: MLFLOW_BACKEND_STORE_URI
+              value: "sqlite:////mlflow/db/mlflow.db"
+            - name: MLFLOW_DEFAULT_ARTIFACT_ROOT
+              valueFrom:
+                configMapKeyRef:
+                  name: ml-config
+                  key: MLFLOW_ARTIFACT_ROOT
+
+          args:
+            - "mlflow"
+            - "server"
+            - "--backend-store-uri=$(MLFLOW_BACKEND_STORE_URI)"
+            - "--artifacts-destination=$(MLFLOW_DEFAULT_ARTIFACT_ROOT)"
+            - "--host=0.0.0.0"
+            - "--port=5001"
+
+          ports:
+            - name: http
+              containerPort: 5001
+
+          volumeMounts:
+            - name: mlflow-backend
+              mountPath: /mlflow/db
+
+      volumes:
+        - name: mlflow-backend
+          persistentVolumeClaim:
+            claimName: mlflow-backend
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mlflow
+  namespace: ml-factory
+spec:
+  selector:
+    app: mlflow
+  ports:
+    - name: http
+      port: 5001
+      targetPort: http
+  type: ClusterIP

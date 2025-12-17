@@ -10,7 +10,7 @@ import streamlit as st
 from client import BackendAPI
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
-from backend.utils.logger import get_logger, setup_logging
+from utils.logger import get_logger, setup_logging
 
 st.set_page_config(page_title="AutoML Dashboard", layout="wide")
 
@@ -34,7 +34,7 @@ if not token:
     from dotenv import load_dotenv
 
     load_dotenv()
-    backend_endpoint = os.getenv("BACKEND_ENDPOINT", "http://127.0.0.1:8080")
+    backend_endpoint = os.getenv("BACKEND_PUBLIC_URL", "http://localhost:8080")
     login_url = f"{backend_endpoint.rstrip('/')}/auth/google/login"
 
     st.link_button("Войти через Google", login_url, type="primary")
@@ -200,9 +200,11 @@ elif page.startswith("2️⃣"):
                     fillna_policy = st.selectbox(
                         "FillNA",
                         options=fill_options,
-                        index=fill_options.index(row["fillna_policy"])
-                        if row["fillna_policy"] in fill_options
-                        else 0,
+                        index=(
+                            fill_options.index(row["fillna_policy"])
+                            if row["fillna_policy"] in fill_options
+                            else 0
+                        ),
                         key=f"fill_{i}",
                     )
 
@@ -311,12 +313,16 @@ elif page.startswith("2️⃣"):
                             {
                                 "name": row["name"],
                                 "data_type": row["col_type"],
-                                "fillna_policy": None
-                                if row["fillna_policy"] in ["–", "-", "None"]
-                                else row["fillna_policy"],
-                                "transformations": None
-                                if row["transformations"] in ["None", "-", "–"]
-                                else row["transformations"],
+                                "fillna_policy": (
+                                    None
+                                    if row["fillna_policy"] in ["–", "-", "None"]
+                                    else row["fillna_policy"]
+                                ),
+                                "transformations": (
+                                    None
+                                    if row["transformations"] in ["None", "-", "–"]
+                                    else row["transformations"]
+                                ),
                                 "drop": row["drop"],
                             }
                             for row in preprocessing

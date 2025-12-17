@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dvc-sync-agent
+  namespace: ml-factory
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dvc-sync-agent
+  template:
+    metadata:
+      labels:
+        app: dvc-sync-agent
+    spec:
+      containers:
+        - name: dvc-sync-agent
+          image: ml-factory-sync-service:latest  
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DVC_SYNC_S3_BUCKET
+              valueFrom:
+                configMapKeyRef:
+                  name: ml-config
+                  key: S3_BUCKET
+
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: ml-secrets
+                  key: S3_ACCESS_KEY
+
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ml-secrets
+                  key: S3_SECRET_KEY
+
+            - name: AWS_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: ml-config
+                  key: S3_REGION
+
+            - name: DVC_ENDPOINT_URL
+              value: "http://minio:9000"
+
+            - name: GIT_URL
+              valueFrom:
+                secretKeyRef:
+                    name: ml-secrets
+                    key: GIT_URL
+
+            - name: DVC_SYNC_BRANCH
+              value: "dev"                
+
+            - name: DVC_SYNC_S3_PREFIX
+              value: "users/"                      
+
+            - name: DVC_SYNC_LOCAL_DATA_ROOT
+              value: "data/s3_mirror"                 
+              
+            - name: REPO_ROOT
+              value: "/repo"                  
+
+            - name: REMOTE_BUCKET
+              value: "dvc-store"          
+
+            - name: DVC_SYNC_INTERVAL
+              value: "10"                     
+
+            - name: AUTO_MAIL
+              value: "auto@commit.com"
+
+            - name: AUTO_NAME
+              value: "Auto"               
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"

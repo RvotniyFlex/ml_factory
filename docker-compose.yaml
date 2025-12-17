@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   minio:
     image: minio/minio
@@ -15,6 +13,98 @@ services:
     command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data
+    networks:
+      - ml-factory-net
+
+  dvc-sync-agent:
+    build:
+      context: .
+      dockerfile: sync_service/Dockerfile
+    environment:
+      GIT_URL: "${GIT_URL}"
+      DVC_SYNC_S3_BUCKET: "${S3_BUCKET}"
+      DVC_SYNC_S3_PREFIX: "${DVC_SYNC_S3_PREFIX}"
+      AWS_ACCESS_KEY_ID: "${S3_ACCESS_KEY}"
+      AWS_SECRET_ACCESS_KEY: "${S3_SECRET_KEY}"
+      AWS_REGION: "${S3_REGION}"
+      DVC_ENDPOINT_URL: "${DVC_ENDPOINT_URL}"
+      DVC_SYNC_INTERVAL: "${DVC_SYNC_INTERVAL}"
+      DVC_SYNC_BRANCH: "${DVC_SYNC_BRANCH}"
+      DVC_SYNC_LOCAL_DATA_ROOT: "${DVC_SYNC_LOCAL_DATA_ROOT}"
+      REPO_ROOT: "${REPO_ROOT}"
+      AUTO_MAIL: "${AUTO_MAIL}"
+      AUTO_NAME: "${AUTO_NAME}"
+      REMOTE_BUCKET: "${REMOTE_BUCKET}"
+    networks:
+      - ml-factory-net
+    depends_on:
+      - minio
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: ml-factory-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # внутри докера minio доступен по имени сервиса, а не по localhost
+      S3_HOST: minio
+      # внешний URL фронта, чтобы редиректы OAuth шли на правильный адрес
+      FRONTEND_URL: "${FRONTEND_URL}"
+    depends_on:
+      - minio
+    ports:
+      - "8080:8080"
+    networks:
+      - ml-factory-net
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: ml-factory-frontend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # внутри docker-сети фронт ходит к бэку по имени сервиса
+      BACKEND_PUBLIC_URL: "http://localhost:8080"
+      BACKEND_ENDPOINT: "${BACKEND_ENDPOINT}"
+      FRONTEND_URL: "${FRONTEND_URL}"
+    depends_on:
+      - backend
+    ports:
+      - "8501:8501"
+    networks:
+      - ml-factory-net
+
+  mlflow:
+    build:
+      context: .
+      dockerfile: mlflow/Dockerfile
+    container_name: mlflow
+    restart: always
+    environment:
+      MLFLOW_TRACKING_URI: http://localhost:5001
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY}
+      AWS_DEFAULT_REGION: ${S3_REGION}
+    depends_on:
+      - minio
+    ports:
+      - "5001:5001"
+    volumes:
+      - mlflow_data:/mlflow
+    networks:
+      - ml-factory-net
 
 volumes:
   minio_data:
+  mlflow_data:
+
+networks:
+  ml-factory-net:
+    driver: bridge

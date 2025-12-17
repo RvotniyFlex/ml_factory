@@ -8,9 +8,9 @@ from backend.user_object import (
     get_user_models,
     get_user_scores,
 )
-from backend.utils.data_models import UserDatasets, UserModels, UserScores
-from backend.utils.dependents import get_s3_client_factory
-from backend.utils.logger import get_logger
+from utils.data_models import UserDatasets, UserModels, UserScores
+from utils.dependents import get_s3_client_factory
+from utils.logger import get_logger
 
 logger = get_logger("backend")
 
